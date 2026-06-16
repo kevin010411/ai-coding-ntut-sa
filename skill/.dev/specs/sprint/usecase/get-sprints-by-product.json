@@ -1,0 +1,277 @@
+{
+  "query": "GetSprintsByProduct",
+  "behavior": "依據 ProductId 回傳 List<SprintDto>",
+  "input": [
+    {
+      "name": "productId",
+      "type": "String",
+      "note": "Product 的唯一識別碼"
+    }
+  ],
+  "method": "sprintDtoProjection.query",
+  "output": "GetSprintsByProductOutput",
+  "domainModelNotes": [],
+  "dependencies": [
+    {
+      "name": "sprintDtoProjection",
+      "type": "SprintDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "testDataSetup": {
+    "description": "準備一個 Product 與多個 Sprint 的測試資料",
+    "steps": [
+      {
+        "order": 1,
+        "useCase": "CreateProductUseCase",
+        "description": "創建 Product",
+        "input": {
+          "id": "product-123",
+          "name": "AI Scrum Assistant",
+          "userId": "user-456"
+        }
+      },
+      {
+        "order": 2,
+        "useCase": "CreateSprintUseCase",
+        "description": "創建第一個 Sprint",
+        "input": {
+          "productId": "product-123",
+          "sprintId": "sprint-001",
+          "name": "Sprint 1",
+          "goal": "Complete user authentication module",
+          "startDateTime": "LocalDateTime.of(2025, 1, 1, 9, 0)",
+          "endDateTime": "LocalDateTime.of(2025, 1, 14, 17, 0)",
+          "zoneId": "Asia/Taipei",
+          "state": "PLANNED",
+          "capacity": "160",
+          "creatorId": "user-789"
+        }
+      },
+      {
+        "order": 3,
+        "useCase": "CreateSprintUseCase",
+        "description": "創建第二個 Sprint",
+        "input": {
+          "productId": "product-123",
+          "sprintId": "sprint-002",
+          "name": "Sprint 2",
+          "goal": "Implement product catalog features",
+          "startDateTime": "LocalDateTime.of(2025, 1, 15, 9, 0)",
+          "endDateTime": "LocalDateTime.of(2025, 1, 28, 17, 0)",
+          "zoneId": "Asia/Taipei",
+          "state": "STARTED",
+          "capacity": "200",
+          "creatorId": "user-789"
+        }
+      },
+      {
+        "order": 4,
+        "useCase": "CreateSprintUseCase",
+        "description": "創建第三個 Sprint",
+        "input": {
+          "productId": "product-123",
+          "sprintId": "sprint-003",
+          "name": "Sprint 3",
+          "goal": "Deploy MVP to production",
+          "startDateTime": "LocalDateTime.of(2025, 1, 29, 9, 0)",
+          "endDateTime": "LocalDateTime.of(2025, 2, 11, 17, 0)",
+          "zoneId": "Asia/Taipei",
+          "state": "PLANNED",
+          "capacity": "180",
+          "creatorId": "user-789"
+        }
+      }
+    ],
+    "note": "在 Given 階段執行這些步驟後，記得清除 setup 產生的 events"
+  },
+  "testScenarios": [
+    {
+      "name": "should_get_all_sprints_for_product_successfully",
+      "given": "一個 Product 與三個相關的 Sprint 已建立",
+      "when": "呼叫 GetSprintsByProductUseCase 查詢該 Product 的所有 Sprint",
+      "then": [
+        "應該成功回傳包含 3 個 SprintReadOnly 的 List",
+        "每個 SprintReadOnly 應包含正確的基本資料（id, productId, name, state）",
+        "每個 SprintReadOnly.goal 應包含對應的 SprintGoal 資訊",
+        "每個 SprintReadOnly.timebox 應包含完整的時間區間資料",
+        "每個 SprintReadOnly.capacity 應包含正確的工時容量",
+        "每個 SprintReadOnly.sprintBoardConfig 應包含正確的看板設定（enableTest, enableReview）",
+        "Sprint 應按照建立順序或時間順序排列"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_no_sprints_found",
+      "given": "Product 存在但沒有任何 Sprint",
+      "when": "查詢該 Product 的所有 Sprint",
+      "then": [
+        "應該回傳空的 List",
+        "ExitCode 應為 SUCCESS"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_product_not_exists",
+      "given": "不存在任何 Product",
+      "when": "查詢不存在的 productId 的 Sprint",
+      "then": [
+        "應該回傳空的 List",
+        "ExitCode 應為 SUCCESS"
+      ]
+    }
+  ],
+  "projections": [
+    {
+      "name": "SprintDtoProjection extends Projection<SprintDtoProjectionInput, List<SprintDto>>",
+      "description": "查詢資料庫並回傳 List<SprintDto>",
+      "input": [
+        {
+          "name": "productId",
+          "type": "String",
+          "note": "Product 的唯一識別碼"
+        }
+      ]
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "SprintDto",
+      "description": "Sprint DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "name": "productId",
+          "type": "String"
+        },
+        {
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "name": "goal",
+          "type": "SprintGoalDto"
+        },
+        {
+          "name": "timebox",
+          "type": "TimeboxDto"
+        },
+        {
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "name": "capacity",
+          "type": "CapacityHoursDto"
+        },
+        {
+          "name": "dailyScrum",
+          "type": "SprintMeetingDto"
+        },
+        {
+          "name": "review",
+          "type": "SprintMeetingDto"
+        },
+        {
+          "name": "retrospective",
+          "type": "SprintMeetingDto"
+        },
+        {
+          "name": "note",
+          "type": "String"
+        },
+        {
+          "name": "extension",
+          "type": "String"
+        },
+        {
+          "name": "sprintBoardConfig",
+          "type": "SprintBoardConfigDto"
+        }
+      ]
+    },
+    {
+      "name": "SprintGoalDto",
+      "description": "SprintGoal DTO",
+      "fields": [
+        {
+          "name": "value",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "name": "TimeboxDto",
+      "description": "Timebox DTO",
+      "fields": [
+        {
+          "name": "start",
+          "type": "LocalDateTime"
+        },
+        {
+          "name": "end",
+          "type": "LocalDateTime"
+        },
+        {
+          "name": "zoneId",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "name": "CapacityHoursDto",
+      "description": "CapacityHours DTO",
+      "fields": [
+        {
+          "name": "value",
+          "type": "Integer"
+        }
+      ]
+    },
+    {
+      "name": "SprintMeetingDto",
+      "description": "SprintMeeting DTO",
+      "fields": [
+        {
+          "name": "scheduledAt",
+          "type": "Instant"
+        },
+        {
+          "name": "venue",
+          "type": "String"
+        },
+        {
+          "name": "duration",
+          "type": "Duration"
+        }
+      ]
+    },
+    {
+      "name": "SprintBoardConfigDto",
+      "description": "SprintBoardConfig DTO",
+      "fields": [
+        {
+          "name": "enableTest",
+          "type": "boolean"
+        },
+        {
+          "name": "enableReview",
+          "type": "boolean"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "SprintMapper",
+      "description": "Map Sprint entity to SprintDto",
+      "location": "sprint.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(Sprint sprint) -> SprintDto",
+        "toDtoList(List<Sprint> sprints) -> List<SprintDto>"
+      ]
+    }
+  ]
+}

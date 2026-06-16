@@ -1,0 +1,35 @@
+# DEPRECATED — This assertion file is superseded by AUTHORITY-REGISTRY.yaml
+# topics: command_input_type + test_input_construction (Phase 1 anti-pattern + Phase 3 canonical)
+# Kept for backward compatibility. Do not add new assertions here.
+#
+# Assertion: Command Input must be class with create() factory
+#
+# Authority: patterns/usecase/command.md
+# Contradiction ID: FC-C
+
+id: command-input-class
+description: >
+  Command UseCase Input must be defined as a class (not record) with a
+  static create() factory method. Records cannot support field assignment
+  after construction, which is required by the test pattern.
+
+assertions:
+  - name: "No consumer marks record Input as CORRECT"
+    type: absence
+    pattern: '(?:✅|CORRECT).*record.*Input.*implements Input'
+    files:
+      - rules/usecase-patterns.md
+      - rules/framework-api.md
+
+  - name: "Authority file contains class Input pattern"
+    type: presence
+    pattern: 'class.*Input implements Input'
+    files:
+      - patterns/usecase/command.md
+
+  - name: "Test examples use create() factory, not positional constructor"
+    type: absence
+    pattern: 'new Create\w+UseCase\.\w+Input\('
+    exclude_context: '❌|WRONG'
+    files:
+      - patterns/testing/usecase-test.md

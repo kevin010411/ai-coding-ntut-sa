@@ -1,0 +1,90 @@
+{
+  "useCase": "SetAcceptanceCriteriaController",
+  "behavior": "Set acceptance criteria for a product backlog item",
+  "canonicalResourcePath": "/v1/api/pbis/{pbiId}",
+  "spec": {
+    "basePath": "/v1/api/pbis/{pbiId}/acceptance-criteria",
+    "endpoints": [
+      {
+        "method": "PUT",
+        "path": "",
+        "summary": "Set Acceptance Criteria",
+        "useCase": "SetAcceptanceCriteriaUseCase",
+        "mapping": {
+          "input": { 
+            "type": "body", 
+            "dto": "SetAcceptanceCriteriaRequest",
+            "pathVars": ["pbiId"]
+          },
+          "output": { 
+            "mode": "async-202", 
+            "operationId": true 
+          }
+        },
+        "produces": ["application/json"],
+        "consumes": ["application/json"],
+        "responses": {
+          "202": { 
+            "body": "AcceptedResponse", 
+            "headers": ["Location", "Operation-Id"] 
+          },
+          "400": { "body": "ApiError" },
+          "404": { "body": "ApiError" }
+        },
+        "headers": {
+          "request": ["Idempotency-Key"],
+          "response": ["Location", "Operation-Id", "traceId"]
+        }
+      }
+    ],
+    "errorMapping": [
+      { "domain": "PbiNotFound", "http": 404, "code": "PBI_NOT_FOUND" },
+      { "domain": "InvalidAcceptanceCriteria", "http": 400, "code": "INVALID_ACCEPTANCE_CRITERIA" }
+    ]
+  },
+  "contracts": {
+    "dtos": [
+      {
+        "name": "SetAcceptanceCriteriaRequest",
+        "fields": [
+          { "name": "productId", "type": "string", "required": true, "minLength": 1, "maxLength": 64, "description": "Product ID that contains the PBI" },
+          { "name": "acceptances", "type": "array", "itemType": "string", "required": true, "description": "List of acceptance criteria" }
+        ]
+      },
+      {
+        "name": "AcceptedResponse",
+        "fields": [
+          { "name": "operationId", "type": "string" },
+          { "name": "status", "type": "string", "default": "ACCEPTED" }
+        ]
+      },
+      {
+        "name": "ApiError",
+        "fields": [
+          { "name": "code", "type": "string" },
+          { "name": "message", "type": "string" },
+          { "name": "traceId", "type": "string" }
+        ]
+      }
+    ]
+  },
+  "policies": {
+    "validation": [
+      { "target": "path.pbiId", "rules": ["notBlank", "length<=64"] },
+      { "target": "body.productId", "rules": ["notBlank", "length<=64"] },
+      { "target": "body.acceptances", "rules": ["notNull"] }
+    ],
+    "idempotency": { 
+      "header": "Idempotency-Key", 
+      "ttlSeconds": 600 
+    },
+    "observability": { 
+      "logging": "request-and-error", 
+      "tracing": true, 
+      "metrics": true 
+    },
+    "async": { 
+      "operationLocationTemplate": "/v1/api/operations/{operationId}" 
+    }
+  }
+}

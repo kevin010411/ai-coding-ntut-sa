@@ -1,0 +1,218 @@
+{
+  "query": "GetTasksByProductBacklogItem",
+  "behavior": "依據 ProductBacklogItemId 回傳該 PBI 下的所有 Tasks 作為 List<TaskDto>",
+  "input": [
+    {
+      "name": "pbiId",
+      "type": "String",
+      "note": "ProductBacklogItem 的唯一識別碼"
+    }
+  ],
+  "method": "taskDtoProjection.query",
+  "output": "GetTasksByProductBacklogItemOutput",
+  "domainModelNotes": [],
+  "dependencies": [
+    {
+      "name": "taskDtoProjection",
+      "type": "TaskDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "testDataSetup": {
+    "description": "準備完整的 PBI 和 Tasks 測試資料",
+    "steps": [
+      {
+        "order": 1,
+        "useCase": "CreateProductBacklogItemUseCase",
+        "description": "創建基本的 PBI",
+        "input": {
+          "productId": "product-123",
+          "pbiId": "pbi-456",
+          "name": "User authentication feature",
+          "creatorId": "user-789"
+        }
+      },
+      {
+        "order": 2,
+        "useCase": "CreateTaskUseCase",
+        "description": "創建第一個 Task",
+        "input": {
+          "productId": "product-123",
+          "pbiId": "pbi-456",
+          "taskId": "task-001",
+          "name": "Design authentication API",
+          "estimatedHours": null,
+          "creatorId": "user-789"
+        }
+      },
+      {
+        "order": 3,
+        "useCase": "CreateTaskUseCase",
+        "description": "創建第二個 Task",
+        "input": {
+          "productId": "product-123",
+          "pbiId": "pbi-456",
+          "taskId": "task-002",
+          "name": "Implement login endpoint",
+          "estimatedHours": "8",
+          "creatorId": "user-789"
+        }
+      },
+      {
+        "order": 4,
+        "useCase": "CreateTaskUseCase",
+        "description": "創建第三個 Task",
+        "input": {
+          "productId": "product-123",
+          "pbiId": "pbi-456",
+          "taskId": "task-003",
+          "name": "Write unit tests",
+          "estimatedHours": "4",
+          "creatorId": "user-789"
+        }
+      },
+      {
+        "order": 5,
+        "useCase": "EstimateTaskUseCase",
+        "description": "估算第一個 Task",
+        "input": {
+          "productId": "product-123",
+          "pbiId": "pbi-456",
+          "taskId": "task-001",
+          "estimatedHours": "5"
+        }
+      }
+    ],
+    "note": "在 Given 階段執行這些步驟後，記得清除 setup 產生的 events"
+  },
+  "testScenarios": [
+    {
+      "name": "should_get_all_tasks_for_pbi_successfully",
+      "given": "PBI 已建立並包含多個 Tasks（有些已估算，有些未估算）",
+      "when": "呼叫 GetTasksByPbiUseCase 查詢該 PBI 的所有 Tasks",
+      "then": [
+        "應該成功回傳 List<TaskReadOnly>",
+        "List 應包含 3 個 TaskReadOnly",
+        "每個 TaskReadOnly 應包含正確的基本資料（id, pbiId, name, state）",
+        "task-001 應有 estimatedHours 和 remainingHours（值為 5）",
+        "task-002 應有 estimatedHours 和 remainingHours（值為 8）",
+        "task-003 應有 estimatedHours 和 remainingHours（值為 4）",
+        "所有 Tasks 的 state 應為 TODO",
+        "所有 Tasks 的 assigneeIds 應為空集合",
+        "所有 Tasks 的 blockedBy 應為空列表"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_pbi_has_no_tasks",
+      "given": "PBI 已建立但沒有任何 Tasks",
+      "when": "呼叫 GetTasksByPbiUseCase 查詢該 PBI 的所有 Tasks",
+      "then": [
+        "應該成功回傳空的 List<TaskReadOnly>",
+        "ExitCode 應為 SUCCESS"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_pbi_not_found",
+      "given": "不存在指定的 PBI",
+      "when": "查詢不存在的 pbiId",
+      "then": [
+        "應該回傳空的 List<TaskReadOnly>",
+        "ExitCode 應為 SUCCESS",
+        "應該包含訊息說明 PBI 不存在或沒有 Tasks"
+      ]
+    }
+  ],
+  "projections": [
+    {
+      "name": "TaskDtoProjection extends Projection<TaskDtoProjectionInput, List<TaskDto>>",
+      "description": "查詢資料庫並回傳 List<TaskDto>",
+      "input": [
+        {
+          "name": "pbiId",
+          "type": "String",
+          "note": "ProductBacklogItem 的唯一識別碼"
+        }
+      ]
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "TaskDto",
+      "description": "Task DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "name": "pbiId",
+          "type": "String"
+        },
+        {
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "name": "assigneeIds",
+          "type": "Set<String>"
+        },
+        {
+          "name": "estimatedHours",
+          "type": "EstimatedHoursDto"
+        },
+        {
+          "name": "remainingHours",
+          "type": "RemainingHoursDto"
+        },
+        {
+          "name": "blockedBy",
+          "type": "List<String>"
+        },
+        {
+          "name": "note",
+          "type": "String"
+        },
+        {
+          "name": "extension",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "name": "EstimatedHoursDto",
+      "description": "EstimatedHours DTO",
+      "fields": [
+        {
+          "name": "value",
+          "type": "Integer"
+        }
+      ]
+    },
+    {
+      "name": "RemainingHoursDto",
+      "description": "RemainingHours DTO",
+      "fields": [
+        {
+          "name": "value",
+          "type": "Integer"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "TaskMapper",
+      "description": "Map Task entity to TaskDto",
+      "location": "pbi.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(Task task) -> TaskDto",
+        "toDtoList(List<Task> tasks) -> List<TaskDto>"
+      ]
+    }
+  ]
+}

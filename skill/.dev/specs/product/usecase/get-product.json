@@ -1,0 +1,186 @@
+{
+  "query": "GetProduct",
+  "behavior": "依據 ProductId 回傳 ProductDto",
+  "input": [
+    {
+      "name": "productId",
+      "type": "String",
+      "note": "Product 的唯一識別碼"
+    }
+  ],
+  "method": "productDtoProjection.query",
+  "output": "GetProductOutput",
+  "domainModelNotes": [
+    "GetProductUseCase 的 output 欄位必須是 ProductReadOnly，而不是 ProductDto。",
+    "ProductReadOnly 必須保留 Product 的查詢操作，禁止任何會改變 Product 狀態的 command/mutation 操作。",
+    "ProductReadOnly 回傳 entity collection 時，必須使用 immutable collection，例如 List.copyOf(...) 或 Collections.unmodifiableList(...)。",
+    "不可產生 ProductDtoProjection、ProductDto、DefinitionOfDoneDto、ProductMapper.toDto(...) 或 DTO mapper 作為本 usecase 的主要回傳模型。"
+  ],
+  "dependencies": [
+    {
+      "name": "productDtoProjection",
+      "type": "ProductDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "testDataSetup": {
+    "description": "準備完整的 Product 測試資料，包含 ProductGoal 和 DefinitionOfDone",
+    "steps": [
+      {
+        "order": 1,
+        "useCase": "CreateProductUseCase",
+        "description": "創建基本的 Product",
+        "input": {
+          "id": "product-123",
+          "name": "AI Scrum Assistant",
+          "userId": "user-456"
+        }
+      },
+      {
+        "order": 2,
+        "useCase": "SetProductGoalUseCase",
+        "description": "設定 Product Goal",
+        "input": {
+          "productId": "product-123",
+          "productGoalId": "goal-123",
+          "name": "Deliver AI-powered Scrum tools",
+          "description": "Build comprehensive AI assistant for Scrum teams",
+          "state": "ACTIVE"
+        }
+      },
+      {
+        "order": 3,
+        "useCase": "DefineDefinitionOfDoneUseCase",
+        "description": "定義 Definition of Done",
+        "input": {
+          "productId": "product-123",
+          "name": "Standard DoD",
+          "criteria": [
+            "Code reviewed",
+            "Unit tests written and passing",
+            "Documentation updated",
+            "Deployed to staging"
+          ],
+          "note": "Team agreed definition",
+          "definedAt": "Instant.now()"
+        }
+      }
+    ],
+    "note": "在 Given 階段執行這些步驟後，記得清除 setup 產生的 events"
+  },
+  "testScenarios": [
+    {
+      "name": "should_get_product_as_read_only_entity_successfully",
+      "given": "完整的 Product 資料已建立（包含 Goal 和 DoD）",
+      "when": "呼叫 GetProductUseCase 查詢該 Product",
+      "then": [
+        "應該成功回傳 ProductReadOnly",
+        "ProductReadOnly 應包含正確的基本資料（id, name, state）",
+        "ProductReadOnly.goal 應包含 ProductGoal 的資訊",
+        "ProductReadOnly.definitionOfDone 應回傳 DefinitionOfDoneReadOnly",
+        "DefinitionOfDoneReadOnly.criteria 應包含所有完成標準且為 immutable collection",
+        "不得回傳 ProductDto 或 mutable Product entity"
+      ]
+    },
+    {
+      "name": "should_reject_mutation_on_read_only_product",
+      "given": "GetProductUseCase 已回傳 ProductReadOnly",
+      "when": "外部 client 嘗試呼叫 ProductReadOnly 的狀態變更方法",
+      "then": [
+        "應該丟出 UnsupportedOperationException 或等價的 domain protection exception",
+        "原始 Product aggregate state 不可被修改"
+      ]
+    },
+    {
+      "name": "should_return_failure_when_product_not_found",
+      "given": "不存在任何 Product",
+      "when": "查詢不存在的 productId",
+      "then": [
+        "應該回傳 ExitCode.FAILURE",
+        "應該包含適當的錯誤訊息"
+      ]
+    }
+  ],
+  "projections": [
+    {
+      "name": "ProductDtoProjection extends Projection<ProductDtoProjectionInput, Optional<ProductDto>>",
+      "description": "查詢資料庫並回傳 Optional<ProductDto>",
+      "input": [
+        {
+          "name": "productId",
+          "type": "String",
+          "note": "Product 的唯一識別碼"
+        }
+      ]
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "ProductDto",
+      "description": "Product DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "ProductId"
+        },
+        {
+          "name": "name",
+          "type": "ProductName"
+        },
+        {
+          "name": "goal",
+          "type": "ProductGoal 或 read-only/value-object 等價查詢結果"
+        },
+        {
+          "name": "definitionOfDone",
+          "type": "Optional<DefinitionOfDoneDto>"
+        },
+        {
+          "name": "note",
+          "type": "String"
+        },
+        {
+          "name": "extension",
+          "type": "String"
+        },
+        {
+          "name": "state",
+          "type": "ProductState"
+        }
+      ]
+    },
+    {
+      "name": "DefinitionOfDoneDto",
+      "description": "DefinitionOfDone DTO",
+      "fields": [
+        {
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "name": "criteria",
+          "type": "List<String>"
+        },
+        {
+          "name": "note",
+          "type": "String"
+        },
+        {
+          "name": "definedAt",
+          "type": "Instant"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "ProductMapper",
+      "description": "Map Product entity to ProductDto",
+      "location": "product.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(Product product) -> ProductDto"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "useCase": "AddTeamMember",
+  "behavior": "Add a member to a scrum team",
+  "input": [
+    { "name": "teamId", "type": "String", "note": "Scrum Team 的唯一識別碼" },
+    { "name": "userId", "type": "String", "note": "Scrum Team 的顯示名稱" },
+    { "name": "role", "type": "String", "note": "Scrum Team Role: PO, SM, DEVELOPER, STAKEHOLDER" }
+  ],
+  "aggregate": "ScrumTeam",
+  "aggregateId": "ScrumTeamId",
+  "method": "ScrumTeam.addMember",
+  "domainEvent": "ScrumTeamEvents.TeamMemberAdded",
+  "repository": "ScrumTeamRepository",
+  "output": "CqrsOutput with scrumTeamId",
+  "domainModelNotes": [
+  ],
+  "domainEvents": [
+    {
+      "name": "ScrumTeamEvents.TeamMemberAdded",
+      "description": "Scrum Team Member 已加入",
+      "attributes": [
+        { "name": "scrumTeamId", "type": "ScrumTeamId" },
+        { "name": "userId", "type": "String" },
+        { "name": "scrumRole", "type": "String" }
+      ]
+    }
+  ],
+  "enums": [
+    {
+      "name": "ScrumRole",
+      "description": "Scrum 角色",
+      "values": ["PO","SM", "DEVELOPER", "STAKEHOLDER"]
+    }
+  ]
+}

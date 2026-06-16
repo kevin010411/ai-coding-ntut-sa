@@ -1,0 +1,216 @@
+{
+  "query": "GetProducts",
+  "behavior": "取得所有 Products 並回傳 List<ProductDto>",
+  "input": [],
+  "method": "productDtoProjection.query",
+  "output": "GetProductsOutput",
+  "domainModelNotes": [
+    "此為查詢操作，不會修改任何 domain 狀態。",
+    "應回傳所有存在的 Products，且每個 Product 都必須轉成 ProductReadOnly。",
+    "回傳的 products collection 必須是 immutable collection。",
+    "不可產生 ProductDtoProjection、ProductDto、DefinitionOfDoneDto、ProductMapper.toDto(...) 或 DTO mapper 作為本 usecase 的主要回傳模型。"
+  ],
+  "dependencies": [
+    {
+      "name": "productDtoProjection",
+      "type": "ProductDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "testDataSetup": {
+    "description": "準備多個 Products 測試資料",
+    "steps": [
+      {
+        "order": 1,
+        "useCase": "CreateProductUseCase",
+        "description": "創建第一個 Product",
+        "input": {
+          "id": "product-1",
+          "name": "AI Scrum Assistant",
+          "userId": "user-456"
+        }
+      },
+      {
+        "order": 2,
+        "useCase": "SetProductGoalUseCase",
+        "description": "設定第一個 Product 的 Goal",
+        "input": {
+          "productId": "product-1",
+          "productGoalId": "goal-1",
+          "name": "Deliver AI-powered Scrum tools",
+          "description": "Build comprehensive AI assistant for Scrum teams",
+          "state": "ACTIVE"
+        }
+      },
+      {
+        "order": 3,
+        "useCase": "DefineDefinitionOfDoneUseCase",
+        "description": "定義第一個 Product 的 DoD",
+        "input": {
+          "productId": "product-1",
+          "name": "Standard DoD",
+          "criteria": [
+            "Code reviewed",
+            "Unit tests passing",
+            "Documentation updated"
+          ],
+          "note": "Team agreed definition",
+          "definedAt": "Instant.now()"
+        }
+      },
+      {
+        "order": 4,
+        "useCase": "CreateProductUseCase",
+        "description": "創建第二個 Product",
+        "input": {
+          "id": "product-2",
+          "name": "Mobile Banking App",
+          "userId": "user-789"
+        }
+      },
+      {
+        "order": 5,
+        "useCase": "SetProductGoalUseCase",
+        "description": "設定第二個 Product 的 Goal",
+        "input": {
+          "productId": "product-2",
+          "productGoalId": "goal-2",
+          "name": "Modernize mobile banking experience",
+          "description": "Create user-friendly mobile banking platform",
+          "state": "ACTIVE"
+        }
+      },
+      {
+        "order": 6,
+        "useCase": "CreateProductUseCase",
+        "description": "創建第三個 Product（沒有 Goal 和 DoD）",
+        "input": {
+          "id": "product-3",
+          "name": "E-commerce Platform",
+          "userId": "user-111"
+        }
+      }
+    ],
+    "note": "在 Given 階段執行這些步驟後，記得清除 setup 產生的 events"
+  },
+  "testScenarios": [
+    {
+      "name": "should_get_all_products_as_read_only_entities_successfully",
+      "given": "多個 Products 已建立（有些包含 Goal 和 DoD，有些沒有）",
+      "when": "呼叫 GetProductsUseCase",
+      "then": [
+        "應該成功回傳 immutable List<ProductReadOnly>",
+        "List 應包含所有 3 個 Products",
+        "第一個 ProductReadOnly 應包含完整的 Goal 和 DoD 資訊",
+        "第二個 ProductReadOnly 應包含 Goal 但沒有 DoD",
+        "第三個 ProductReadOnly 既沒有 Goal 也沒有 DoD",
+        "每個 ProductReadOnly 應包含正確的基本資料（id, name, state）",
+        "不得回傳 List<ProductDto> 或 mutable Product entity collection"
+      ]
+    },
+    {
+      "name": "should_return_empty_immutable_list_when_no_products",
+      "given": "資料庫中沒有任何 Product",
+      "when": "呼叫 GetProductsUseCase",
+      "then": [
+        "應該成功回傳空的 immutable List<ProductReadOnly>",
+        "ExitCode 應為 SUCCESS"
+      ]
+    },
+    {
+      "name": "should_reject_mutation_on_each_read_only_product",
+      "given": "GetProductsUseCase 已回傳 ProductReadOnly list",
+      "when": "外部 client 嘗試修改任一 ProductReadOnly 或修改回傳 collection",
+      "then": [
+        "修改 ProductReadOnly 應丟出 UnsupportedOperationException 或等價的 domain protection exception",
+        "修改 products collection 應丟出 UnsupportedOperationException",
+        "原始 Product aggregate state 不可被修改"
+      ]
+    },
+    {
+      "name": "should_return_single_product_when_only_one_exists",
+      "given": "只有一個 Product 存在",
+      "when": "呼叫 GetProductsUseCase",
+      "then": [
+        "應該成功回傳包含單一 ProductReadOnly 的 immutable List",
+        "該 ProductReadOnly 應包含正確的資料"
+      ]
+    }
+  ],
+  "projections": [
+    {
+      "name": "ProductDtoProjection extends Projection<ProductDtoProjectionInput, Optional<ProductDto>>",
+      "description": "查詢資料庫並回傳 Optional<ProductDto>",
+      "input": []
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "ProductDto",
+      "description": "Product DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "ProductId"
+        },
+        {
+          "name": "name",
+          "type": "ProductName"
+        },
+        {
+          "name": "goal",
+          "type": "ProductGoal 或 read-only/value-object 等價查詢結果"
+        },
+        {
+          "name": "definitionOfDone",
+          "type": "Optional<DefinitionOfDoneDto>"
+        },
+        {
+          "name": "note",
+          "type": "String"
+        },
+        {
+          "name": "extension",
+          "type": "String"
+        },
+        {
+          "name": "state",
+          "type": "ProductState"
+        }
+      ]
+    },
+    {
+      "name": "DefinitionOfDoneDto",
+      "description": "DefinitionOfDone DTO",
+      "fields": [
+        {
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "name": "criteria",
+          "type": "List<String>"
+        },
+        {
+          "name": "note",
+          "type": "String"
+        },
+        {
+          "name": "definedAt",
+          "type": "Instant"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "ProductMapper",
+      "description": "Map Product entity to ProductDto",
+      "location": "product.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(Product product) -> ProductDto"
+      ]
+    }
+  ]
+}

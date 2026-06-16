@@ -1,0 +1,130 @@
+{
+  "restController": "GetSprintsByProductController",
+  "spec": {
+    "basePath": "v1/api/products/{productId}/sprints",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "",
+        "useCase": "GetSprintsByProductUseCase",
+        "mapping": {
+          "input": {
+            "type": "path",
+            "pathVars": [
+              "productId"
+            ]
+          },
+          "output": {
+            "type": "list",
+            "dto": "SprintDto"
+          }
+        },
+        "responses": {
+          "200": {
+            "body": "List<SprintDto>",
+            "description": "成功回傳該產品的所有 Sprint 列表"
+          },
+          "400": {
+            "body": "ApiError",
+            "description": "無效的 productId 格式"
+          },
+          "401": {
+            "body": "ApiError",
+            "description": "未授權存取"
+          }
+        },
+        "produces": [
+          "application/json"
+        ]
+      }
+    ]
+  },
+  "contracts": {
+    "name": "ApiError",
+    "fields": [
+      {
+        "name": "code",
+        "type": "string",
+        "example": "INVALID_PRODUCT_ID"
+      },
+      {
+        "name": "message",
+        "type": "string"
+      },
+      {
+        "name": "traceId",
+        "type": "string"
+      }
+    ]
+  },
+  "policies": {
+    "validation": [
+      {
+        "target": "path.productId",
+        "rules": [
+          "notBlank"
+        ]
+      }
+    ],
+    "caching": {
+      "etag": "optional",
+      "cacheControl": "max-age=60, public",
+      "note": "Sprint 列表資料可以快取短時間"
+    },
+    "observability": {
+      "logging": "request-and-error",
+      "tracing": true,
+      "metrics": true
+    }
+  },
+  "testScenarios": [
+    {
+      "name": "should_return_all_sprints_for_product",
+      "given": "Product 存在且有多個 Sprint",
+      "when": "GET /v1/api/products/{productId}/sprints",
+      "then": [
+        "應該回傳 HTTP 200",
+        "Response body 應包含 Sprint 的陣列",
+        "每個 SprintDto 應包含完整資訊（id, name, goal, timebox, state 等）",
+        "所有 Sprint 的 productId 應與請求的 productId 相符"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_no_sprints",
+      "given": "Product 存在但沒有任何 Sprint",
+      "when": "GET /v1/api/products/{productId}/sprints",
+      "then": [
+        "應該回傳 HTTP 200",
+        "Response body 應為空陣列 []"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_product_not_exists",
+      "given": "Product 不存在",
+      "when": "GET /v1/api/products/{productId}/sprints",
+      "then": [
+        "應該回傳 HTTP 200",
+        "Response body 應為空陣列 []",
+        "註：依照 Query 慣例，查詢不存在的資源回傳空結果而非 404"
+      ]
+    },
+    {
+      "name": "should_return_400_when_product_id_invalid",
+      "given": "請求包含無效的 productId",
+      "when": "GET /v1/api/products/{空字串或特殊字元}/sprints",
+      "then": [
+        "應該回傳 HTTP 400",
+        "Response body 應包含適當的錯誤訊息"
+      ]
+    },
+    {
+      "name": "should_return_401_when_not_authenticated",
+      "given": "請求未包含有效的認證資訊",
+      "when": "GET /v1/api/products/{productId}/sprints",
+      "then": [
+        "應該回傳 HTTP 401",
+        "Response body 應包含未授權錯誤訊息"
+      ]
+    }
+  ]
+}

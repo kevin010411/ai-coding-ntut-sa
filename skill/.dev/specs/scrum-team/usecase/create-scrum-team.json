@@ -1,0 +1,81 @@
+{
+  "useCase": "CreateScrumTeam",
+  "behavior": "Create a new scrum team",
+  "input": [
+    { "name": "teamId", "type": "String", "note": "Scrum Team 的唯一識別碼" },
+    { "name": "name", "type": "String", "note": "Scrum Team 的顯示名稱" },
+    { "name": "description", "type": "String", "note": "Scrum Team 的詳細說明" },
+    { "name": "note", "type": "String", "note": "Scrum Team 的備註" },
+    { "name": "extension", "type": "String", "note": "Scrum Team 的擴充資訊" },
+    { "name": "creatorId", "type": "String", "note": "建立 Scrum Team 的使用者 ID, 紀錄在領域事件中" }
+  ],
+  "aggregate": "ScrumTeam",
+  "aggregateId": "ScrumTeamId",
+  "method": "ScrumTeam constructor",
+  "domainEvent": "ScrumTeamEvents.ScrumTeamCreated",
+  "repository": "ScrumTeamRepository",
+  "output": "CqrsOutput with scrumTeamId",
+  "domainModelNotes": [
+    "ScrumTeam 是 Aggregate Root",
+    "ScrumTeam 使用建構函數建立新實例"
+  ],
+  "constructorPreconditions": [
+    {
+      "rule": "Required fields validation",
+      "description": "必要欄位都必須通過 requireNotNull() 檢查",
+      "fields": ["id", "name", "creatorId"]
+    },
+    {
+      "rule": "Name validation",
+      "description": "團隊名稱不能為空字串",
+      "validation": "require('ScrumTeam name must not be empty', () -> !name.trim().isEmpty())"
+    }
+  ],
+  "constructorPostconditions": [
+    {
+      "rule": "Field assignment verification",
+      "description": "使用 ensure() 檢查所有欄位都正確設定",
+      "checks": [
+        "Team ID is set correctly",
+        "Team name is set correctly",
+        "Team description is set correctly (nullable)",
+        "Team note is set correctly (nullable)",
+        "Team extension is set correctly (nullable)",
+        "Team members list is initialized empty",
+        "Team is not assigned to any product initially"
+      ]
+    },
+    {
+      "rule": "Domain event verification",
+      "description": "確保 ScrumTeamCreated 領域事件正確產生",
+      "validation": "最後一個領域事件必須是 ScrumTeamCreated 且包含所有正確欄位值"
+    }
+  ],
+  "aggregates": [
+    {
+      "name": "ScrumTeam",
+      "description": "Scrum 團隊",
+      "attributes": [
+        { "name": "id", "type": "ScrumTeamId",  "constraint": "non-null" },
+        { "name": "name", "type": "String","constraint": "non-null" },
+        { "name": "description", "type": "String",  "constraint": "default = null" },
+        { "name": "note", "type": "String", "constraint": "default = null" },
+        { "name": "extension", "type": "String", "constraint": "default = null" }
+      ]
+    }
+  ],
+  "domainEvents": [
+    {
+      "name": "ScrumTeamEvents.ScrumTeamCreated",
+      "description": "Scrum Team 建立",
+      "attributes": [
+        { "name": "scrumTeamId", "type": "ScrumTeamId" },
+        { "name": "name", "type": "String" },
+        { "name": "description", "type": "String" },
+        { "name": "note", "type": "String" },
+        { "name": "extension", "type": "String" },
+        { "name": "creatorId", "type": "String"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "restController": "GetProductsController",
+  "spec": {
+    "basePath": "v1/api/products",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "",
+        "useCase": "GetProductsUseCase",
+        "mapping": {
+          "input": {
+            "type": "none"
+          },
+          "output": {
+            "type": "list",
+            "dto": "ProductDto"
+          }
+        },
+        "responses": {
+          "200": { 
+            "body": "List<ProductDto>",
+            "description": "成功回傳所有 Products，可能為空列表"
+          },
+          "401": { 
+            "body": "ApiError",
+            "description": "未授權存取"
+          },
+          "500": {
+            "body": "ApiError",
+            "description": "伺服器內部錯誤"
+          }
+        },
+        "produces": ["application/json"]
+      }
+    ]
+  },
+  "contracts": {
+    "name": "ApiError",
+    "fields": [
+      { "name": "code", "type": "string", "example": "INTERNAL_SERVER_ERROR" },
+      { "name": "message", "type": "string" },
+      { "name": "traceId", "type": "string" }
+    ]
+  },
+  "policies": {
+    "validation": [],
+    "domainExposure": {
+      "pattern": "read-only-entity",
+      "rules": [
+        "Controller may serialize immutable List<ProductDto> returned by GetProductsUseCase.",
+        "Controller must not map ProductDto back to ProductDto.",
+        "Controller must not expose mutable Product entity or mutable collection."
+      ]
+    },
+    "caching": { 
+      "etag": "optional", 
+      "cacheControl": "max-age=60, public",
+      "note": "Products 列表可以快取較短時間以提升效能"
+    },
+    "observability": { 
+      "logging": "request-and-error", 
+      "tracing": true, 
+      "metrics": true 
+    },
+    "pagination": {
+      "enabled": false,
+      "note": "目前不實作分頁，未來可能需要加入"
+    }
+  },
+  "testScenarios": [
+    {
+      "name": "should_return_all_products_when_multiple_exist",
+      "given": "資料庫中存在多個 Products",
+      "when": "GET /v1/api/products",
+        "then": [
+        "應該回傳 HTTP 200",
+        "Response body 應包含所有 Products 的 List",
+        "每個 ProductDto 應包含完整資訊",
+        "不得回傳 ProductDto"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_no_products",
+      "given": "資料庫中沒有任何 Product",
+      "when": "GET /v1/api/products",
+      "then": [
+        "應該回傳 HTTP 200",
+        "Response body 應為空陣列 []"
+      ]
+    },
+    {
+      "name": "should_return_401_when_not_authenticated",
+      "given": "請求未包含有效的認證資訊",
+      "when": "GET /v1/api/products",
+      "then": [
+        "應該回傳 HTTP 401",
+        "Response body 應包含適當的錯誤訊息"
+      ]
+    }
+  ]
+}

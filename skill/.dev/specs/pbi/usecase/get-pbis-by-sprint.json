@@ -1,0 +1,247 @@
+{
+  "query": "GetBacklogItemsBySprint",
+  "behavior": "依據 SprintId 回傳該 Sprint 內的所有 ProductBacklogItemDto 列表",
+  "input": [
+    {
+      "name": "sprintId",
+      "type": "String",
+      "note": "Sprint 的唯一識別碼"
+    }
+  ],
+  "method": "productBacklogItemDtoProjection.query",
+  "output": "GetBacklogItemsBySprintOutput<List<ProductBacklogItemDto>>",
+  "domainModelNotes": [
+    "查詢特定 Sprint 內的所有 PBIs",
+    "如果 Sprint 不存在或沒有 PBIs，回傳空列表",
+    "PBIs 應按照 orderId 排序"
+  ],
+  "dependencies": [
+    {
+      "name": "productBacklogItemDtoProjection",
+      "type": "ProductBacklogItemDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "testDataSetup": {
+    "description": "準備測試資料：Sprint 和相關的 Product Backlog Items",
+    "steps": [
+      {
+        "order": 1,
+        "useCase": "CreateProductUseCase",
+        "description": "創建基本的 Product",
+        "input": {
+          "id": "product-123",
+          "name": "Test Product",
+          "userId": "user-456"
+        }
+      },
+      {
+        "order": 2,
+        "useCase": "CreateSprintUseCase",
+        "description": "創建 Sprint",
+        "input": {
+          "id": "sprint-123",
+          "productId": "product-123",
+          "name": "Sprint 1",
+          "startDate": "2025-01-01",
+          "endDate": "2025-01-14"
+        }
+      },
+      {
+        "order": 3,
+        "useCase": "CreateProductBacklogItemUseCase",
+        "description": "創建第一個 PBI",
+        "input": {
+          "id": "pbi-1",
+          "productId": "product-123",
+          "name": "First PBI",
+          "description": "First PBI description",
+          "importance": "HIGH",
+          "orderId": 1
+        }
+      },
+      {
+        "order": 4,
+        "useCase": "CreateProductBacklogItemUseCase",
+        "description": "創建第二個 PBI",
+        "input": {
+          "id": "pbi-2",
+          "productId": "product-123",
+          "name": "Second PBI",
+          "description": "Second PBI description",
+          "importance": "MEDIUM",
+          "orderId": 2
+        }
+      },
+      {
+        "order": 5,
+        "useCase": "SelectProductBacklogItemUseCase",
+        "description": "將第一個 PBI 加入 Sprint",
+        "input": {
+          "pbiId": "pbi-1",
+          "sprintId": "sprint-123"
+        }
+      },
+      {
+        "order": 6,
+        "useCase": "SelectProductBacklogItemUseCase",
+        "description": "將第二個 PBI 加入 Sprint",
+        "input": {
+          "pbiId": "pbi-2",
+          "sprintId": "sprint-123"
+        }
+      },
+      {
+        "order": 7,
+        "useCase": "EstimateProductBacklogItemUseCase",
+        "description": "為第一個 PBI 估算",
+        "input": {
+          "pbiId": "pbi-1",
+          "points": 5,
+          "type": "STORY_POINTS"
+        }
+      }
+    ],
+    "note": "在 Given 階段執行這些步驟後，記得清除 setup 產生的 events"
+  },
+  "testScenarios": [
+    {
+      "name": "should_get_pbis_by_sprint_successfully",
+      "given": "Sprint 內有多個 Product Backlog Items",
+      "when": "呼叫 GetBacklogItemsBySprintUseCase 查詢該 Sprint",
+      "then": [
+        "應該成功回傳 List<ProductBacklogItemReadOnly>",
+        "列表應包含該 Sprint 內的所有 PBIs",
+        "每個 PBI 應包含正確的基本資料（id, name, sprintId）",
+        "PBIs 應按照 orderId 排序",
+        "有估算的 PBI 應包含 EstimateReadOnly"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_sprint_has_no_pbis",
+      "given": "Sprint 存在但沒有任何 PBIs",
+      "when": "查詢該 Sprint 的 PBIs",
+      "then": [
+        "應該回傳空列表",
+        "ExitCode 應為 SUCCESS"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_sprint_not_found",
+      "given": "不存在指定的 Sprint",
+      "when": "查詢不存在的 sprintId",
+      "then": [
+        "應該回傳空列表",
+        "ExitCode 應為 SUCCESS",
+        "不應該拋出例外"
+      ]
+    }
+  ],
+  "projections": [
+    {
+      "name": "ProductBacklogItemDtoProjection extends Projection<ProductBacklogItemDtoProjectionInput, List<ProductBacklogItemDto>>",
+      "description": "查詢資料庫並回傳 List<ProductBacklogItemDto>",
+      "input": [
+        {
+          "name": "sprintId",
+          "type": "String",
+          "note": "Sprint 的唯一識別碼"
+        }
+      ]
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "ProductBacklogItemDto",
+      "description": "ProductBacklogItem DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "name": "productId",
+          "type": "String"
+        },
+        {
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "name": "description",
+          "type": "String"
+        },
+        {
+          "name": "sprintId",
+          "type": "String"
+        },
+        {
+          "name": "estimate",
+          "type": "EstimateDto"
+        },
+        {
+          "name": "importance",
+          "type": "String"
+        },
+        {
+          "name": "state",
+          "type": "String"
+        },
+        {
+          "name": "orderId",
+          "type": "Integer"
+        },
+        {
+          "name": "tasks",
+          "type": "List<TaskDto>"
+        },
+        {
+          "name": "note",
+          "type": "String"
+        },
+        {
+          "name": "creatorId",
+          "type": "String"
+        },
+        {
+          "name": "createdAt",
+          "type": "Instant"
+        },
+        {
+          "name": "extension",
+          "type": "String"
+        }
+      ]
+    },
+    {
+      "name": "EstimateDto",
+      "description": "Estimate DTO",
+      "fields": [
+        {
+          "name": "points",
+          "type": "Integer"
+        },
+        {
+          "name": "type",
+          "type": "String"
+        },
+        {
+          "name": "confidence",
+          "type": "String"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "ProductBacklogItemMapper",
+      "description": "Map ProductBacklogItem entity to ProductBacklogItemDto",
+      "location": "pbi.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(ProductBacklogItem productBacklogItem) -> ProductBacklogItemDto",
+        "toDtoList(List<ProductBacklogItem> productBacklogItems) -> List<ProductBacklogItemDto>"
+      ]
+    }
+  ]
+}

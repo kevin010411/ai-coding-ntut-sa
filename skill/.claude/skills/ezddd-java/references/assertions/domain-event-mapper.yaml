@@ -1,0 +1,37 @@
+# DEPRECATED — This assertion file is superseded by AUTHORITY-REGISTRY.yaml
+# topic: domain_event_mapper_key (Phase 1 anti-pattern + Phase 3 canonical)
+# Kept for backward compatibility. Do not add new assertions here.
+#
+# Assertion: Domain Event mapper() must use MAPPING_TYPE_PREFIX
+#
+# Authority: patterns/domain/domain-event.md
+# Contradiction ID: FC-D
+
+id: domain-event-mapper-prefix
+description: >
+  Domain Event mapper() must use MAPPING_TYPE_PREFIX constant
+  (e.g., MAPPING_TYPE_PREFIX + "ProductCreated") instead of
+  SCREAMING_SNAKE_CASE keys (e.g., "PRODUCT_CREATED").
+
+assertions:
+  - name: "No consumer uses SCREAMING_SNAKE_CASE mapper keys as correct pattern"
+    type: absence
+    pattern: 'mapper\.put\("[A-Z][A-Z_]+",'
+    exclude_context: '❌|WRONG|deprecated'
+    files:
+      - rules/domain-patterns.md
+      - code-reviewer/checklist.md
+      - examples/PlanEvents.java
+
+  - name: "Authority file contains MAPPING_TYPE_PREFIX pattern"
+    type: presence
+    pattern: 'MAPPING_TYPE_PREFIX'
+    files:
+      - patterns/domain/domain-event.md
+
+  - name: "Consumer files contain MAPPING_TYPE_PREFIX pattern"
+    type: presence
+    pattern: 'MAPPING_TYPE_PREFIX'
+    files:
+      - rules/domain-patterns.md
+      - examples/PlanEvents.java

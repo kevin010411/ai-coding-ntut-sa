@@ -1,0 +1,303 @@
+{
+  "query": "GetProductBacklogItemsByProduct",
+  "behavior": "依據 ProductId 回傳該 Product 的所有 ProductBacklogItemDto 列表",
+  "input": [
+    {
+      "name": "productId",
+      "type": "String",
+      "note": "Product 的唯一識別碼"
+    }
+  ],
+  "method": "productBacklogItemDtoProjection.query",
+  "output": "GetProductBacklogItemsByProductOutput<List<ProductBacklogItemDto>>",
+  "domainModelNotes": [
+    "此為 Query Use Case，不修改任何 domain state",
+    "回傳指定 Product 的所有 PBI，包含已選入 Sprint 和未選入的"
+  ],
+  "dependencies": [
+    {
+      "name": "productBacklogItemDtoProjection",
+      "type": "ProductBacklogItemDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "testDataSetup": {
+    "description": "準備完整的 Product 和多個 ProductBacklogItem 測試資料",
+    "steps": [
+      {
+        "order": 1,
+        "useCase": "CreateProductUseCase",
+        "description": "創建基本的 Product",
+        "input": {
+          "id": "product-123",
+          "name": "AI Scrum Assistant",
+          "userId": "user-456"
+        }
+      },
+      {
+        "order": 2,
+        "useCase": "CreateProductBacklogItemUseCase",
+        "description": "創建第一個 PBI",
+        "input": {
+          "productId": "product-123",
+          "productBacklogItemId": "pbi-001",
+          "title": "User authentication",
+          "description": "As a user, I want to log in securely",
+          "acceptanceCriteria": [
+            "Login with email",
+            "Password validation"
+          ],
+          "priority": 1,
+          "orderId": 1
+        }
+      },
+      {
+        "order": 3,
+        "useCase": "EstimateProductBacklogItemUseCase",
+        "description": "估算第一個 PBI",
+        "input": {
+          "productBacklogItemId": "pbi-001",
+          "value": "8",
+          "type": "STORY_POINT"
+        }
+      },
+      {
+        "order": 4,
+        "useCase": "CreateProductBacklogItemUseCase",
+        "description": "創建第二個 PBI",
+        "input": {
+          "productId": "product-123",
+          "productBacklogItemId": "pbi-002",
+          "title": "Dashboard implementation",
+          "description": "As a user, I want to see a dashboard",
+          "acceptanceCriteria": [
+            "Show metrics",
+            "Real-time updates"
+          ],
+          "priority": 2,
+          "orderId": 2
+        }
+      },
+      {
+        "order": 5,
+        "useCase": "EstimateProductBacklogItemUseCase",
+        "description": "估算第二個 PBI",
+        "input": {
+          "productBacklogItemId": "pbi-002",
+          "value": "13",
+          "type": "STORY_POINT"
+        }
+      },
+      {
+        "order": 6,
+        "useCase": "CreateTaskUseCase",
+        "description": "為第一個 PBI 創建 Task",
+        "input": {
+          "productBacklogItemId": "pbi-001",
+          "taskId": "task-001",
+          "title": "Design login UI",
+          "description": "Create login form components"
+        }
+      },
+      {
+        "order": 7,
+        "useCase": "CreateProductBacklogItemUseCase",
+        "description": "創建第三個 PBI（未估算）",
+        "input": {
+          "productId": "product-123",
+          "productBacklogItemId": "pbi-003",
+          "title": "API integration",
+          "description": "As a developer, I want REST APIs",
+          "acceptanceCriteria": [
+            "RESTful endpoints",
+            "OpenAPI documentation"
+          ],
+          "priority": 3,
+          "orderId": 3
+        }
+      }
+    ],
+    "note": "在 Given 階段執行這些步驟後，記得清除 setup 產生的 events"
+  },
+  "testScenarios": [
+    {
+      "name": "should_get_all_pbis_by_product_successfully",
+      "given": "一個 Product 已建立且包含多個 PBI（有些已估算，有些未估算，有些有 Tasks）",
+      "when": "呼叫 GetProductBacklogItemsByProductUseCase 查詢該 Product 的所有 PBI",
+      "then": [
+        "應該成功回傳 List<ProductBacklogItemReadOnly>",
+        "列表應包含該 Product 的所有 3 個 PBI",
+        "PBI 應按照 orderId 排序（1, 2, 3）",
+        "已估算的 PBI 應包含正確的 EstimateReadOnly",
+        "未估算的 PBI 的 estimate 欄位應為 null",
+        "有 Tasks 的 PBI 應包含完整的 TaskReadOnly 列表",
+        "每個 ProductBacklogItemReadOnly 應包含正確的基本資料（id, title, description, priority）"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_product_has_no_pbis",
+      "given": "一個 Product 已建立但沒有任何 PBI",
+      "when": "查詢該 Product 的所有 PBI",
+      "then": [
+        "應該成功回傳空列表 List<ProductBacklogItemReadOnly>",
+        "不應該回傳 null 或錯誤"
+      ]
+    },
+    {
+      "name": "should_return_failure_when_product_not_found",
+      "given": "不存在任何 Product",
+      "when": "查詢不存在的 productId",
+      "then": [
+        "應該回傳 ExitCode.FAILURE",
+        "應該包含適當的錯誤訊息"
+      ]
+    },
+    {
+      "name": "should_include_pbis_selected_in_sprint",
+      "given": "一個 Product 包含多個 PBI，其中部分已被選入 Sprint",
+      "when": "查詢該 Product 的所有 PBI",
+      "then": [
+        "應該包含所有 PBI（不論是否已選入 Sprint）",
+        "已選入 Sprint 的 PBI 應包含 sprintId",
+        "未選入 Sprint 的 PBI 的 sprintId 應為 null"
+      ]
+    }
+  ],
+  "projections": [
+    {
+      "name": "ProductBacklogItemDtoProjection extends Projection<ProductBacklogItemDtoProjectionInput, List<ProductBacklogItemDto>>",
+      "description": "查詢資料庫並回傳 List<ProductBacklogItemDto>",
+      "input": [
+        {
+          "name": "productId",
+          "type": "String",
+          "note": "Product 的唯一識別碼"
+        }
+      ]
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "ProductBacklogItemDto",
+      "description": "ProductBacklogItem DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "name": "productId",
+          "type": "String"
+        },
+        {
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "name": "description",
+          "type": "String"
+        },
+        {
+          "name": "acceptanceCriteria",
+          "type": "List<String>"
+        },
+        {
+          "name": "estimate",
+          "type": "EstimateDto"
+        },
+        {
+          "name": "priority",
+          "type": "Integer"
+        },
+        {
+          "name": "orderId",
+          "type": "Integer"
+        },
+        {
+          "name": "status",
+          "type": "String"
+        },
+        {
+          "name": "sprintId",
+          "type": "String"
+        },
+        {
+          "name": "tasks",
+          "type": "List<TaskDto>"
+        },
+        {
+          "name": "createdAt",
+          "type": "Instant"
+        },
+        {
+          "name": "updatedAt",
+          "type": "Instant"
+        }
+      ]
+    },
+    {
+      "name": "EstimateDto",
+      "description": "Estimate DTO",
+      "fields": [
+        {
+          "name": "value",
+          "type": "String"
+        },
+        {
+          "name": "type",
+          "type": "String"
+        },
+        {
+          "name": "estimatedAt",
+          "type": "Instant"
+        }
+      ]
+    },
+    {
+      "name": "TaskDto",
+      "description": "Task DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "name": "title",
+          "type": "String"
+        },
+        {
+          "name": "description",
+          "type": "String"
+        },
+        {
+          "name": "estimate",
+          "type": "EstimateDto"
+        },
+        {
+          "name": "status",
+          "type": "String"
+        },
+        {
+          "name": "assignee",
+          "type": "String"
+        },
+        {
+          "name": "createdAt",
+          "type": "Instant"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "ProductBacklogItemMapper",
+      "description": "Map ProductBacklogItem entity to ProductBacklogItemDto",
+      "location": "pbi.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(ProductBacklogItem productBacklogItem) -> ProductBacklogItemDto",
+        "toDtoList(List<ProductBacklogItem> productBacklogItems) -> List<ProductBacklogItemDto>"
+      ]
+    }
+  ]
+}

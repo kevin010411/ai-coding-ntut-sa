@@ -1,0 +1,123 @@
+{
+  "restController": "GetSprintController",
+  "spec": {
+    "basePath": "v1/api/sprints/{sprintId}",
+    "endpoints": [
+      {
+        "method": "GET",
+        "path": "",
+        "useCase": "GetSprintUseCase",
+        "mapping": {
+          "input": {
+            "type": "path",
+            "pathVars": [
+              "sprintId"
+            ]
+          },
+          "output": {
+            "type": "dto",
+            "dto": "SprintDto"
+          }
+        },
+        "responses": {
+          "200": {
+            "body": "SprintDto",
+            "description": "成功回傳 Sprint 資訊"
+          },
+          "400": {
+            "body": "ApiError",
+            "description": "無效的 sprintId 格式"
+          },
+          "404": {
+            "body": "ApiError",
+            "description": "Sprint 不存在"
+          },
+          "401": {
+            "body": "ApiError",
+            "description": "未授權存取"
+          }
+        },
+        "produces": [
+          "application/json"
+        ]
+      }
+    ]
+  },
+  "contracts": {
+    "name": "ApiError",
+    "fields": [
+      {
+        "name": "code",
+        "type": "string",
+        "example": "SPRINT_NOT_FOUND"
+      },
+      {
+        "name": "message",
+        "type": "string"
+      },
+      {
+        "name": "traceId",
+        "type": "string"
+      }
+    ]
+  },
+  "policies": {
+    "validation": [
+      {
+        "target": "path.sprintId",
+        "rules": [
+          "notBlank"
+        ]
+      }
+    ],
+    "caching": {
+      "etag": "optional",
+      "cacheControl": "max-age=60, public",
+      "note": "Sprint 資料可以快取短時間"
+    },
+    "observability": {
+      "logging": "request-and-error",
+      "tracing": true,
+      "metrics": true
+    }
+  },
+  "testScenarios": [
+    {
+      "name": "should_return_sprint_when_sprint_exists",
+      "given": "Sprint 存在於資料庫中",
+      "when": "GET /v1/api/sprints/{sprintId}",
+      "then": [
+        "應該回傳 HTTP 200",
+        "Response body 應包含完整的 SprintDto",
+        "SprintDto 應包含 id, sprintGoal, timebox 等資訊"
+      ]
+    },
+    {
+      "name": "should_return_404_when_sprint_not_found",
+      "given": "Sprint 不存在",
+      "when": "GET /v1/api/sprints/{sprintId}",
+      "then": [
+        "應該回傳 HTTP 404",
+        "Response body 應包含 SPRINT_NOT_FOUND 錯誤碼"
+      ]
+    },
+    {
+      "name": "should_return_400_when_sprint_id_invalid",
+      "given": "請求包含無效的 sprintId",
+      "when": "GET /v1/api/sprints/{空字串或特殊字元}",
+      "then": [
+        "應該回傳 HTTP 400",
+        "Response body 應包含適當的錯誤訊息"
+      ]
+    },
+    {
+      "name": "should_return_401_when_not_authenticated",
+      "given": "請求未包含有效的認證資訊",
+      "when": "GET /v1/api/sprints/{sprintId}",
+      "then": [
+        "應該回傳 HTTP 401",
+        "Response body 應包含未授權錯誤訊息"
+      ]
+    }
+  ]
+}

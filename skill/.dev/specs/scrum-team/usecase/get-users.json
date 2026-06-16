@@ -1,0 +1,56 @@
+{
+  "query": "GetUsers",
+  "behavior": "回傳 List<UserDto>",
+  "input": [],
+  "method": "userDtoProjection.query",
+  "output": "GetUsersOutput",
+  "domainModelNotes": [
+    "沒有 User Aggregate, UserReadOnly 直接從資料庫找出資料"
+  ],
+  "dependencies": [
+    {
+      "name": "userDtoProjection",
+      "type": "UserDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "projections": [
+    {
+      "name": "UserDtoProjection extends Projection<UserDtoProjectionInput, List<UserDto>>",
+      "description": "查詢資料庫並回傳 List<UserDto>",
+      "input": []
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "UserDto",
+      "description": "User DTO",
+      "fields": [
+        {
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "name": "email",
+          "type": "String"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "UserMapper",
+      "description": "Map User entity to UserDto",
+      "location": "scrum-team.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(User user) -> UserDto",
+        "toDtoList(List<User> users) -> List<UserDto>"
+      ]
+    }
+  ]
+}

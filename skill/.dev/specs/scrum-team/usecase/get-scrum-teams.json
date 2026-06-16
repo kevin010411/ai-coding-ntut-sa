@@ -1,0 +1,84 @@
+{
+  "query": "GetScrumTeams",
+  "behavior": "取得所有 Scrum Teams 列表並回傳 List<ScrumTeamDto>",
+  "input": [],
+  "method": "scrumTeamDtoProjection.query",
+  "output": "GetScrumTeamsOutput",
+  "domainModelNotes": [
+    "此為查詢操作，不會修改任何 domain 狀態",
+    "應回傳所有存在的 Scrum Teams"
+  ],
+  "dependencies": [
+    {
+      "name": "scrumTeamDtoProjection",
+      "type": "ScrumTeamDtoProjection",
+      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+    }
+  ],
+  "testScenarios": [
+    {
+      "name": "should_return_all_teams_when_teams_exist",
+      "given": "多個 Scrum Teams 已建立",
+      "when": "呼叫 GetScrumTeamsUseCase",
+      "then": [
+        "應該成功回傳 List<ScrumTeamReadOnly>",
+        "List 應包含所有 teams"
+      ]
+    },
+    {
+      "name": "should_return_empty_list_when_no_teams_exist",
+      "given": "沒有任何 Scrum Team 存在",
+      "when": "呼叫 GetScrumTeamsUseCase",
+      "then": [
+        "應該成功回傳空的 List<ScrumTeamReadOnly>"
+      ]
+    }
+  ],
+  "projections": [
+    {
+      "name": "ScrumTeamDtoProjection extends Projection<ScrumTeamDtoProjectionInput, List<ScrumTeamDto>>",
+      "description": "查詢資料庫並回傳 List<ScrumTeamDto>",
+      "input": []
+    }
+  ],
+  "dataTransferObjects": [
+    {
+      "name": "ScrumTeamDto",
+      "description": "ScrumTeam DTO",
+      "fields": [
+        {
+          "name": "teamId",
+          "type": "String"
+        },
+        {
+          "name": "name",
+          "type": "String"
+        },
+        {
+          "name": "description",
+          "type": "String"
+        },
+        {
+          "name": "memberCount",
+          "type": "int"
+        },
+        {
+          "name": "createdAt",
+          "type": "String"
+        }
+      ]
+    }
+  ],
+  "mappers": [
+    {
+      "name": "ScrumTeamMapper",
+      "description": "Map ScrumTeam entity to ScrumTeamDto",
+      "location": "scrum-team.usecase.port",
+      "critical": true,
+      "methods": [
+        "toDto(ScrumTeam scrumTeam) -> ScrumTeamDto",
+        "toDtoList(List<ScrumTeam> scrumTeams) -> List<ScrumTeamDto>"
+      ]
+    }
+  ]
+}

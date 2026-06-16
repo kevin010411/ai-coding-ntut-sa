@@ -1,0 +1,71 @@
+{
+  "useCase": "CreateProductController",
+  "behavior": "Create a new Product aggregate.",
+  "spec": {
+    "basePath": "/v1/api/products",
+    "endpoints": [
+      {
+        "method": "POST",
+        "path": "",
+        "summary": "Create product",
+        "useCase": "CreateProductUseCase",
+        "mapping": {
+          "input": { "type": "body", "dto": "CreateProductRequest" },
+          "output": { "mode": "async-202", "operationId": true }
+        },
+        "produces": ["application/json"],
+        "consumes": ["application/json"],
+        "responses": {
+          "202": { "body": "AcceptedResponse", "headers": ["Location","Operation-Id"] },
+          "400": { "body": "ApiError" },
+          "401": { "body": "ApiError" },
+          "403": { "body": "ApiError" },
+          "409": { "body": "ApiError" }
+        },
+        "headers": {
+          "request": ["Idempotency-Key"],
+          "response": ["Location","Operation-Id","traceId"]
+        }
+      }
+    ],
+    "errorMapping": [
+      { "domain": "DuplicateProductId", "http": 409, "code": "DUPLICATE_PRODUCT" },
+      { "domain": "InvalidName", "http": 400, "code": "INVALID_NAME" }
+    ]
+  },
+  "contracts": {
+    "dtos": [
+      {
+        "name": "CreateProductRequest",
+        "fields": [
+          { "name": "productId", "type": "string", "nullable": true, "note": "client-supplied optional" },
+          { "name": "name", "type": "string", "minLength": 1, "maxLength": 100 },
+          { "name": "userId", "type": "String", "minLength": 1, "maxLength": 100}
+        ]
+      },
+      {
+        "name": "AcceptedResponse",
+        "fields": [
+          { "name": "operationId", "type": "string" },
+          { "name": "status", "type": "string", "example": "ACCEPTED" }
+        ]
+      },
+      {
+        "name": "ApiError",
+        "fields": [
+          { "name": "code", "type": "string" },
+          { "name": "message", "type": "string" },
+          { "name": "traceId", "type": "string" }
+        ]
+      }
+    ]
+  },
+  "policies": {
+    "validation": [
+      { "target": "body.name", "rules": ["notBlank","length<=100"] },
+      { "target": "body.userId", "rules": ["notBlank","length<=100"]  }
+    ],
+    "idempotency": { "header": "Idempotency-Key", "ttlSeconds": 600 },
+    "observability": { "logging": "request-and-error", "tracing": true, "metrics": true }
+  }
+}

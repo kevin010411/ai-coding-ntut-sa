@@ -1,0 +1,93 @@
+{
+  "entity": "Hours",
+  "type": "ValueObject",
+  "package": "tw.teddysoft.aiscrum.common.entity",
+  "description": "代表時數的值物件，支援小數點計算",
+  "implementation": {
+    "dataType": "BigDecimal",
+    "note": "使用 BigDecimal 以支援精確的小數計算，如 0.5、1.5、2.8 等"
+  },
+  "attributes": [
+    {
+      "name": "value",
+      "type": "BigDecimal",
+      "constraint": "nullable, >= 0, <= 99999",
+      "description": "時數值，可為 null 表示未設定"
+    }
+  ],
+  "methods": [
+    {
+      "name": "valueOf(BigDecimal value)",
+      "returns": "Hours",
+      "description": "從 BigDecimal 創建 Hours 實例"
+    },
+    {
+      "name": "valueOf(Integer value)",
+      "returns": "Hours",
+      "description": "從整數創建 Hours 實例，內部轉換為 BigDecimal"
+    },
+    {
+      "name": "valueOf(String value)",
+      "returns": "Hours",
+      "description": "從字串創建 Hours 實例，支援小數格式如 '0.5', '1.5'"
+    },
+    {
+      "name": "valueOf(double value)",
+      "returns": "Hours",
+      "description": "從 double 創建 Hours 實例，使用 BigDecimal.valueOf 避免精度問題"
+    },
+    {
+      "name": "zero()",
+      "returns": "Hours",
+      "description": "返回值為 0 的 Hours 實例"
+    },
+    {
+      "name": "empty()",
+      "returns": "Hours",
+      "description": "返回值為 null 的 Hours 實例"
+    },
+    {
+      "name": "isEmpty()",
+      "returns": "boolean",
+      "description": "檢查時數值是否為 null"
+    },
+    {
+      "name": "add(Hours other)",
+      "returns": "Hours",
+      "description": "加法運算，使用 BigDecimal.add()"
+    },
+    {
+      "name": "subtract(Hours other)",
+      "returns": "Hours",
+      "description": "減法運算，使用 BigDecimal.subtract()，結果不可為負數"
+    },
+    {
+      "name": "toString()",
+      "returns": "String",
+      "description": "轉換為字串，使用 stripTrailingZeros().toPlainString() 去除不必要的零"
+    }
+  ],
+  "validationRules": [
+    "時數值不可為負數",
+    "時數值不可超過 99999",
+    "支援小數點精度（如 0.5 小時 = 30 分鐘）"
+  ],
+  "usageExamples": [
+    "Hours.valueOf('0.5') - 創建 0.5 小時",
+    "Hours.valueOf('1.5') - 創建 1.5 小時",
+    "Hours.valueOf(2) - 創建 2 小時",
+    "Hours.valueOf(BigDecimal.valueOf(3.25)) - 創建 3.25 小時"
+  ],
+  "relatedEntities": [
+    "EstimatedHours - 預估時數，包裝 Hours",
+    "RemainingHours - 剩餘時數，包裝 Hours",
+    "CapacityHours - 容量時數，包裝 Hours"
+  ],
+  "changeHistory": [
+    {
+      "date": "2025-08-17",
+      "change": "從 Integer 改為 BigDecimal 以支援小數時數",
+      "reason": "需要支援更精確的時間估算，如 0.5 小時、1.5 小時等"
+    }
+  ]
+}

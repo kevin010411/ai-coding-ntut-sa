@@ -1,0 +1,87 @@
+{
+  "useCase": "RenameProduct",
+  "behavior": "Rename an existing product",
+  "input": [
+    { "name": "productId", "type": "String", "note": "Product 的唯一識別碼" },
+    { "name": "newName", "type": "String", "note": "Product 的新名稱" },
+    { "name": "userId", "type": "String", "note": "執行重新命名的使用者 ID，紀錄在領域事件中" }
+  ],
+  "aggregate": "Product",
+  "aggregateId": "ProductId",
+  "method": "Product.rename",
+  "domainEvent": "ProductEvents.ProductRenamed",
+  "repository": "ProductRepository",
+  "output": "CqrsOutput with productId",
+  "domainModelNotes": [
+    "Product.rename 變更 ProductName value object",
+    "rename 前必須檢查 Product 未被刪除",
+    "新名稱不可為 null 或空白（由 ProductName value object 保證）"
+  ],
+  "preconditions": [
+    {
+      "rule": "Product not deleted",
+      "description": "require('Not deleted', () -> !this.isDeleted)"
+    },
+    {
+      "rule": "New name not null",
+      "description": "requireNotNull('newName', newName)"
+    }
+  ],
+  "postconditions": [
+    {
+      "rule": "Name is updated",
+      "description": "ensure('Name matches', () -> this.name.equals(newName))"
+    },
+    {
+      "rule": "Domain event is generated",
+      "description": "最後一個領域事件必須是 ProductRenamed 且包含正確的 productId, oldName, newName"
+    }
+  ],
+  "domainEvents": [
+    {
+      "name": "ProductEvents.ProductRenamed",
+      "description": "產品重新命名",
+      "attributes": [
+        { "name": "productId", "type": "ProductId" },
+        { "name": "oldName", "type": "ProductName" },
+        { "name": "newName", "type": "ProductName" },
+        { "name": "metadata", "type": "Map<String, String>" },
+        { "name": "id", "type": "UUID" },
+        { "name": "occurredOn", "type": "Instant" }
+      ],
+      "notes": [
+        "記錄 oldName 以支援審計和事件回放",
+        "必須加入 sealed interface 的 switch 和 mapper()"
+      ]
+    }
+  ],
+  "aggregateChanges": {
+    "newMethod": {
+      "name": "rename",
+      "signature": "public void rename(ProductName newName, String userId)",
+      "body": [
+        "require('Not deleted', () -> !this.isDeleted)",
+        "requireNotNull('newName', newName)",
+        "var oldName = this.name",
+        "apply(new ProductEvents.ProductRenamed(this.id, oldName, newName, metadata, uuid, now))",
+        "ensure('Name matches', () -> this.name.equals(newName))"
+      ]
+    },
+    "newWhenHandler": {
+      "event": "ProductRenamed",
+      "body": "this.name = event.newName()"
+    },
+    "switchCaseAddition": "case ProductEvents.ProductRenamed e -> when(e);"
+  },
+  "servicePattern": {
+    "class": "RenameProductService",
+    "steps": [
+      "1. 從 repository 用 productId 載入 Product aggregate",
+      "2. 如果找不到，回傳 failure('Product not found')",
+      "3. 建立 ProductName value object（new ProductName(input.newName)）",
+      "4. 呼叫 product.rename(newProductName, input.userId)",
+      "5. 儲存到 repository",
+      "6. 回傳 success with productId"
+    ]
+  }
+}

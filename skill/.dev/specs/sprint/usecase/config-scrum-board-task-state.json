@@ -1,0 +1,37 @@
+{
+  "useCase": "ConfigScrumBoardTaskState",
+  "behavior": "Configure the Scrum board task state columns for a Sprint",
+  "input": [
+    { "name": "productId", "type": "String", "note": "Product 的唯一識別碼" },
+    { "name": "sprintId", "type": "String", "note": "Sprint 的唯一識別碼" },
+    { "name": "enableTest", "type": "Boolean", "note": "是否啟用測試欄位" },
+    { "name": "enableReview", "type": "Boolean", "note": "是否啟用審查欄位" }
+  ],
+  "aggregate": "Sprint",
+  "aggregateId": "SprintId",
+  "method": "Sprint.configBoardTaskState(SprintBoardConfig sprintBoardConfig)",
+  "domainEvent": ["SprintEvents.SprintBoardConfigured"],
+  "repository": "SprintRepository",
+  "output": "CqrsOutput with sprintId",
+  "domainModelNotes": [
+    "requireNotNull(\"Sprint board config\", sprintBoardConfig)",
+    "require(\"Sprint is not started\", () -> state != SprintState.STARTED)",
+    "require(\"Sprint is not completed\", () -> state != SprintState.COMPLETED)",
+    "require(\"Sprint is not canceled\", () -> state != SprintState.CANCELED)",
+    "ensure(\"Sprint board config is updated\", () -> this.sprintBoardConfig.equals(sprintBoardConfig))"
+  ],
+  "domainEvents": [
+    {
+      "name": "SprintEvents.SprintBoardConfigured",
+      "description": "Sprint 看板任務狀態欄位配置已更新",
+      "attributes": [
+        { "name": "productId", "type": "ProductId", "constraint": "non-null" },
+        { "name": "sprintId", "type": "SprintId", "constraint": "non-null" },
+        { "name": "sprintBoardConfig", "type": "SprintBoardConfig", "constraint": "non-null" },
+        { "name": "metadata", "type": "Map<String,String>", "constraint": "non-null" },
+        { "name": "id", "type": "UUID", "constraint": "non-null" },
+        { "name": "occurredOn", "type": "Instant", "constraint": "non-null" }
+      ]
+    }
+  ]
+}

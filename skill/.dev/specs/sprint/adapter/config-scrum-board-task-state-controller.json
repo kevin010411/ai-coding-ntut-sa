@@ -1,0 +1,99 @@
+{
+  "controller": "ConfigScrumBoardTaskStateController",
+  "description": "REST controller for configuring Sprint board task state columns",
+  "baseUrl": "/v1/api/sprints/{sprintId}/board-config",
+  "useCase": "ConfigScrumBoardTaskStateUseCase",
+  "endpoints": [
+    {
+      "method": "PUT",
+      "path": "",
+      "description": "Configure the Scrum board task state columns for a Sprint",
+      "pathParams": [
+        { "name": "sprintId", "type": "String", "required": true, "description": "Sprint ID" }
+      ],
+      "requestBody": {
+        "name": "ConfigBoardRequest",
+        "fields": [
+          { "name": "productId", "type": "String", "required": true, "validation": "@NotBlank @Size(min=1, max=64)" },
+          { "name": "enableTest", "type": "Boolean", "required": true, "validation": "@NotNull" },
+          { "name": "enableReview", "type": "Boolean", "required": true, "validation": "@NotNull" }
+        ]
+      },
+      "headers": [
+        { "name": "Idempotency-Key", "required": false, "description": "Idempotency key for request deduplication" }
+      ],
+      "responses": [
+        {
+          "status": 202,
+          "description": "Accepted - Board configuration updated successfully",
+          "headers": [
+            { "name": "Operation-Id", "description": "Unique operation identifier" },
+            { "name": "Location", "description": "Location of the operation resource" }
+          ],
+          "body": {
+            "name": "AcceptedResponse",
+            "fields": [
+              { "name": "operationId", "type": "String" },
+              { "name": "status", "type": "String", "value": "ACCEPTED" }
+            ]
+          }
+        },
+        {
+          "status": 400,
+          "description": "Bad Request - Invalid input or Sprint state",
+          "body": {
+            "name": "ApiError",
+            "fields": [
+              { "name": "code", "type": "String" },
+              { "name": "message", "type": "String" },
+              { "name": "traceId", "type": "String" }
+            ]
+          }
+        },
+        {
+          "status": 404,
+          "description": "Not Found - Sprint not found",
+          "body": {
+            "name": "ApiError",
+            "fields": [
+              { "name": "code", "type": "String" },
+              { "name": "message", "type": "String" },
+              { "name": "traceId", "type": "String" }
+            ]
+          }
+        },
+        {
+          "status": 500,
+          "description": "Internal Server Error",
+          "body": {
+            "name": "ApiError",
+            "fields": [
+              { "name": "code", "type": "String" },
+              { "name": "message", "type": "String" },
+              { "name": "traceId", "type": "String" }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "errorHandling": {
+    "SPRINT_NOT_FOUND": "404 - Sprint not found",
+    "INVALID_SPRINT_STATE": "400 - Sprint must be in PLANNED state",
+    "VALIDATION_ERROR": "400 - Input validation failed",
+    "INTERNAL_ERROR": "500 - Unexpected error occurred"
+  },
+  "testing": {
+    "unitTests": [
+      "Test successful board configuration",
+      "Test Sprint not found scenario",
+      "Test invalid Sprint state",
+      "Test validation errors"
+    ],
+    "integrationTests": [
+      "Test end-to-end board configuration",
+      "Test idempotency key handling",
+      "Test error response formats"
+    ]
+  }
+}

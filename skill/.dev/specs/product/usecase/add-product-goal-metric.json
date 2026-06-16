@@ -1,0 +1,36 @@
+{
+  "useCase": "AddProductGoalMetric",
+  "behavior": "Add a product goal metric",
+  "input": [
+    { "name": "productId", "type": "String", "note": "Product 的唯一識別碼, VO" },
+    { "name": "productGoalId", "type": "String", "note": "Product goal 的唯一識別碼, VO" },
+    { "name": "name", "type": "String", "note": "Product goal metric 的顯示名稱" },
+    { "name": "unit", "type": "String", "note": "Product goal metric 的單位" },
+    { "name": "description", "type": "String", "note": "Product goal metric 詳細描述" },
+    { "name": "targetValue", "type": "BigDecimal" },
+    { "name": "currentValue", "type": "BigDecimal" }
+  ],
+  "aggregate": "Product",
+  "aggregateId": "ProductId",
+  "method": "Product.addGoalMetric",
+  "domainEvent": "ProductEvents.ProductGoalAdded",
+  "repository": "ProductRepository",
+  "output": "CqrsOutput with productGoalId",
+  "domainModelNotes": [
+  ],
+  "domainEvents": [
+    {
+      "name": "ProductEvents.ProductGoalAdded",
+      "description": "產品目標度量設立",
+      "attributes": [
+        { "name": "productId", "type": "ProductId" },
+        { "name": "productGoalId", "type": "ProductGoalId" },
+        { "name": "name", "type": "String" },
+        { "name": "unit", "type": "String" },
+        { "name": "description", "type": "String" },
+        { "name": "targetValue", "type": "BigDecimal" },
+        { "name": "currentValue", "type": "BigDecimal" }
+      ]
+    }
+  ]
+}

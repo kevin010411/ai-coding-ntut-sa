@@ -1,0 +1,51 @@
+{
+  "useCase": "DefineDefinitionOfDone",
+  "behavior": "Set the Definition Of Done (DoD) of a Product",
+  "input": [
+    { "name": "productId", "type": "String", "note": "Product 的唯一識別碼" },
+    { "name": "name", "type": "String", "note": "DoD 顯示名稱" },
+    { "name": "criteria", "type": "List<String>", "note": "DoD 條件" },
+    { "name": "note", "type": "String", "note": "DoD 備註" },
+    { "name": "definedAt", "type": "Instant", "note": "DoD 定義時間" }
+  ],
+  "aggregate": "Product",
+  "aggregateId": "ProductId",
+  "method": "Product.defineDefinitionOfDone",
+  "domainEvent": "ProductEvents.DefinitionOfDoneDefined",
+  "repository": "ProductRepository",
+  "output": "CqrsOutput with productId",
+  "domainModelNotes": [
+  ],
+  "domainEvents": [
+    {
+      "name": "ProductEvents.DefinitionOfDoneDefined",
+      "description": "DoD 已設立",
+      "attributes": [
+        { "name": "productId", "type": "ProductId" },
+        { "name": "name", "type": "String" },
+        { "name": "criteria", "type": "SequencedSet<DoneCriterion>" },
+        { "name": "note", "type": "String" },
+        { "name": "definedAt", "type": "Instant"}
+      ]
+    }
+  ],
+  "valueObjects": [
+    {
+      "name": "DefinitionOfDone",
+      "description": "DoD",
+      "fields": [
+        { "name": "name", "type": "String" },
+        { "name": "criteria", "type": "SequencedSet<DoneCriterion>" },
+        { "name": "note", "type": "String" },
+        { "name": "definedAt", "type": "Instant" }
+      ]
+    },
+    {
+      "name": "DoneCriterion",
+      "description": "DoD 的完成條件",
+      "fields": [
+        { "name": "name", "type": "String" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "controller": "CompleteSprintController",
+  "description": "REST controller for completing a sprint",
+  "useCase": "CompleteSprintUseCase",
+  "path": "/products/{productId}/sprints/{sprintId}/complete",
+  "method": "POST",
+  "request": {
+    "pathVariables": [
+      { "name": "productId", "type": "String", "description": "Product ID" },
+      { "name": "sprintId", "type": "String", "description": "Sprint ID" }
+    ],
+    "body": {
+      "type": "CompleteSprintRequest",
+      "fields": [
+        { "name": "occurredOn", "type": "LocalDateTime", "required": false, "description": "Optional completion timestamp" }
+      ]
+    }
+  },
+  "response": {
+    "status": "202 ACCEPTED",
+    "body": {
+      "type": "CompleteSprintResponse",
+      "fields": [
+        { "name": "sprintId", "type": "String", "description": "The ID of the completed sprint" }
+      ]
+    }
+  },
+  "errorResponses": [
+    {
+      "status": "404 NOT_FOUND",
+      "description": "Sprint not found"
+    },
+    {
+      "status": "400 BAD_REQUEST",
+      "description": "Invalid request or sprint already completed"
+    }
+  ],
+  "notes": [
+    "Use @PathVariable for productId and sprintId",
+    "Request body is optional - if no body or occurredOn is null, use current time",
+    "Return 202 ACCEPTED for successful completion",
+    "Return 404 if sprint not found",
+    "Return 400 if sprint is already completed"
+  ]
+}

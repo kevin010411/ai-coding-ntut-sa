@@ -1,0 +1,338 @@
+# Consistency Checklist for ezddd-java Skills
+#
+# Purpose: Deterministic L0 cross-file consistency verification.
+#          Eliminates exploration path divergence in LLM-based analysis.
+#
+# Usage:
+#   When asked to analyze skills consistency, execute EVERY check in order.
+#   Do NOT skip checks. Do NOT freestyle — follow the checklist.
+#
+# Output format:
+#   For each check, produce a row in the result table:
+#   | Check ID | Status | Details |
+#
+# Design principle:
+#   L0 (this file) = deterministic, same result every time
+#   L1 (after L0)  = semantic analysis on L0-passed areas only
+
+meta:
+  version: "1.0"
+  created: "2026-02-04"
+  scope: ".claude/skills/ezddd-java/references/"
+  total_checks: 7
+  estimated_files_touched: 20
+
+# ──────────────────────────────────────────────────────────────
+# XR-01: File/Script Reference Existence
+# ──────────────────────────────────────────────────────────────
+# Method: For every .sh or file path reference, verify the target exists.
+# Known risk: Reports A/B both found phantom script references.
+
+xr_01_file_reference_existence:
+  id: XR-01
+  name: "File/Script Reference Existence"
+  severity_if_broken: CRITICAL
+  method: file_exists
+  description: |
+    Grep all files for references to .sh scripts and explicit file paths.
+    For each reference, verify the target file actually exists on disk.
+  checks:
+    # NOTE: AUTHORITY-REGISTRY.yaml does NOT reference scripts (verified 2026-02-04).
+    # cbf-workflow.md and swf-workflow.md Step 1.5 were REMOVED — no longer reference scripts.
+
+    - description: "templates/README.md references scripts/"
+      source_file: "templates/README.md"
+      referenced_paths:
+        - "scripts/check-pattern-consistency.sh"
+      note: "Script exists at .claude/skills/ezddd-java/scripts/ — valid reference"
+
+# ──────────────────────────────────────────────────────────────
+# XR-02: AUTHORITY-REGISTRY Consumer Completeness
+# ──────────────────────────────────────────────────────────────
+# Method: For each topic in AUTHORITY-REGISTRY.yaml, verify:
+#   (a) authority file exists
+#   (b) authority_line_hint points to relevant content
+#   (c) each consumer file exists and contains the referenced section
+
+xr_02_authority_registry_integrity:
+  id: XR-02
+  name: "AUTHORITY-REGISTRY Consumer Completeness"
+  severity_if_broken: HIGH
+  method: bidirectional_trace
+  description: |
+    For every topic in AUTHORITY-REGISTRY.yaml:
+    1. Verify authority file exists at the declared path
+    2. Verify authority_line_hint (if set) points to relevant content (sample 5)
+    3. Verify each consumer file exists
+    4. Grep consumer file for the topic's canonical_pattern or section name
+  source_file: "AUTHORITY-REGISTRY.yaml"
+  verification_steps:
+    - step: "List all topics"
+      action: "Parse AUTHORITY-REGISTRY.yaml, extract topic list"
+    - step: "Verify authority files"
+      action: "For each topic, check authority file path resolves to an existing file"
+    - step: "Spot-check line hints"
+      action: "Read 5 random authority files at authority_line_hint, verify content relevance"
+    - step: "Verify consumer files"
+      action: "For each consumer entry, check file exists"
+    - step: "Verify consumer content"
+      action: "For each consumer, grep for canonical_pattern or section keyword"
+  known_gaps_to_check:
+    - "patterns/domain/value-object.md -> rules/domain-patterns.md (VO section)"
+    - "patterns/infrastructure/config.md -> templates/aggregate-config-template.md"
+    - "patterns/usecase/command.md -> code-reviewer/checklist.md"
+    - "rules/common-rules.md -> all 16 pattern files (only 4 tracked)"
+    - "rules/testing-patterns.md -> init-project/templates.md"
+
+# ──────────────────────────────────────────────────────────────
+# XR-03: Blocking Gate Synchronization
+# ──────────────────────────────────────────────────────────────
+# Method: Grep for BLOCKING keywords across all files.
+#   Verify each gate is consistently defined in ALL relevant locations.
+
+xr_03_blocking_gate_sync:
+  id: XR-03
+  name: "Blocking Gate Synchronization"
+  severity_if_broken: CRITICAL
+  method: keyword_cross_reference
+  description: |
+    Identify all BLOCKING checkpoints and verify they appear consistently
+    in: uc-workflow.md, SKILL.md, and execute-uc.md.
+  blocking_gates:
+    - gate_id: "GATE-DUAL-PROFILE"
+      description: "Dual-Profile Test must pass before Spec Compliance"
+      must_appear_in:
+        - "uc-executor/uc-workflow.md"
+      should_appear_in:
+        - "../../SKILL.md"
+        - "../../commands/execute-uc.md"
+      keywords: ["BLOCKING", "Dual-Profile", "BOTH profiles"]
+
+    - gate_id: "GATE-DETERMINISTIC-REVIEW"
+      description: "Gate 2.5 — 0 CRITICAL violations required"
+      must_appear_in:
+        - "uc-executor/uc-workflow.md"
+      should_appear_in:
+        - "../../SKILL.md"
+        - "../../commands/execute-uc.md"
+      keywords: ["BLOCKING", "CRITICAL", "validate-generated-code"]
+
+    - gate_id: "GATE-SPEC-COMPLIANCE"
+      description: "testScenarios coverage verification"
+      must_appear_in:
+        - "uc-executor/uc-workflow.md"
+      keywords: ["testScenarios", "coverage"]
+
+# ──────────────────────────────────────────────────────────────
+# XR-04: Deprecated Content vs Active References
+# ──────────────────────────────────────────────────────────────
+# Method: Find all deprecated/removed markers, then check if other
+#   files still reference the deprecated content as if it were active.
+
+xr_04_deprecated_vs_active:
+  id: XR-04
+  name: "Deprecated Content vs Active References"
+  severity_if_broken: HIGH
+  method: contradiction_detect
+  description: |
+    1. Grep for deprecated/removed/已廢棄/REMOVED/strikethrough (~~)
+    2. For each deprecated item, identify what it is (step, class, pattern)
+    3. Grep all other files for references to that item
+    4. Flag any reference that treats the item as ACTIVE (not deprecated)
+  known_deprecated_items:
+    - item: "BlockingMessageBus class"
+      deprecated_in:
+        - "framework replaced in ezapp 2.0.0"
+      check_still_referenced_in:
+        - "templates/test-case-full.md"
+
+    - item: "GenericInMemoryRepository class"
+      deprecated_in:
+        - "framework replaced in ezapp 2.0.0"
+      check_still_referenced_in:
+        - "templates/test-case-full.md"
+        - "templates/local-utils.md"
+
+    - item: "TestContext singleton pattern"
+      deprecated_in:
+        - "replaced by Spring DI"
+      check_still_referenced_in:
+        - "templates/test-case-full.md"
+
+# ──────────────────────────────────────────────────────────────
+# XR-05: Step Number Cross-File Consistency
+# ──────────────────────────────────────────────────────────────
+# Method: Enumerate all Step N references across UC executor workflow files.
+#   Verify each step that is referenced is also DEFINED somewhere.
+
+xr_05_step_number_consistency:
+  id: XR-05
+  name: "Step Number Cross-File Consistency"
+  severity_if_broken: MEDIUM
+  method: enum_match
+  description: |
+    1. Grep uc-executor/ files for "Step \d" patterns
+    2. Build a master list of all defined steps (from uc-workflow.md)
+    3. Build a reference list (from execute-uc.md, SKILL.md)
+    4. Flag: steps referenced but not defined, or defined but never referenced
+  files_to_scan:
+    - "uc-executor/uc-workflow.md"
+    - "../../commands/execute-uc.md"
+    - "../../SKILL.md"
+
+# ──────────────────────────────────────────────────────────────
+# XR-06: Spec Type Feature Coverage Matrix
+# ──────────────────────────────────────────────────────────────
+# Method: Build a matrix of [spec_type x feature], check for gaps.
+
+xr_06_spec_type_coverage_matrix:
+  id: XR-06
+  name: "Spec Type Feature Coverage Matrix"
+  severity_if_broken: HIGH
+  method: matrix_check
+  description: |
+    Build a 5x5 matrix. For each cell, verify the feature is either:
+    (a) documented in the UC workflow, OR
+    (b) explicitly marked N/A with a reason
+
+    Output the matrix as a table with status per cell.
+  spec_types:
+    - COMMAND
+    - QUERY
+    - REACTOR
+  features:
+    - id: "workflow-path"
+      description: "Has dedicated generation path in uc-workflow.md"
+      verify_in: "uc-executor/uc-workflow.md"
+
+    - id: "required-fields"
+      description: "Has required fields defined in Step 0.3"
+      verify_in: "uc-executor/uc-workflow.md (Step 0.3)"
+
+    - id: "test-generation"
+      description: "Defines test generation approach or explicit skip"
+      verify_in: "uc-executor/uc-workflow.md (Step 4.3)"
+
+    - id: "infrastructure-generation"
+      description: "Defines infrastructure generation or explicit skip"
+      verify_in: "uc-executor/uc-workflow.md (Step 4.4)"
+
+    - id: "field-mapping"
+      description: "Has field mapping in json-to-pattern-mapping.md"
+      verify_in: "uc-executor/json-to-pattern-mapping.md"
+
+# ──────────────────────────────────────────────────────────────
+# XR-07: Template vs Pattern Rule Alignment
+# ──────────────────────────────────────────────────────────────
+# Method: For each template-pattern pair, verify key rules match.
+
+xr_07_template_pattern_alignment:
+  id: XR-07
+  name: "Template vs Pattern Rule Alignment"
+  severity_if_broken: HIGH
+  method: pair_compare
+  description: |
+    For each pair, read both files and verify the specific checkpoints match.
+    This is the most time-consuming check but also the most valuable.
+  pairs:
+    - template: "templates/aggregate-config-template.md"
+      pattern: "patterns/infrastructure/config.md"
+      checkpoints:
+        - "InMemoryOrmDb uses Map-arg constructor (not no-arg)"
+        - "Bean naming: InMemory and Outbox use same @Bean name"
+        - "Profile annotation: on Repository configs, NOT on UseCaseConfig"
+        - "OrmClient extends SpringJpaClient only"
+        - "@EnableJpaRepositories location mentioned or cross-referenced"
+        - "relayExecutor dependency from SharedInfrastructureConfig"
+
+    - template: "templates/base-test-classes.md"
+      pattern: "rules/testing-patterns.md"
+      checkpoints:
+        - "@DirtiesContext(classMode = AFTER_EACH_TEST_METHOD) position"
+        - "setUpEventCapture()/tearDownEventCapture() visibility (protected)"
+        - "Concrete test @BeforeEach must call setUpEventCapture()"
+        - "Event assertion timeout value (10 seconds)"
+
+    - template: "templates/test-case-full.md"
+      pattern: "patterns/testing/usecase-test.md"
+      checkpoints:
+        - "No deprecated classes (BlockingMessageBus, GenericInMemoryRepository)"
+        - "@EzScenario method must be public void"
+        - "ezSpec lambda signature: Consumer<ScenarioEnvironment>"
+        - "Input construction uses Input.create() factory"
+
+    - template: "examples/PlanEvents.java"
+      pattern: "patterns/domain/domain-event.md"
+      checkpoints:
+        - "sealed interface with MAPPING_TYPE_PREFIX constant"
+        - "static mapper() method present"
+        - "Enum fields downgraded to String (Rule 3.5)"
+        - "metadata() default method present"
+        - "source() default method before MAPPING_TYPE_PREFIX"
+
+    - template: "examples/dual-profile-test-infrastructure.md"
+      pattern: "patterns/infrastructure/config.md"
+      checkpoints:
+        - "SharedInfrastructureConfig provides relayExecutor bean"
+        - "SharedOutboxConfig has @EnableJpaRepositories"
+        - "DataSource properties match"
+        - "Profile isolation: InMemory vs Outbox bean names identical"
+
+    - template: "templates/reactor-full.md"
+      pattern: "patterns/usecase/reactor.md"
+      checkpoints:
+        - "Reactor interface in usecase/reactor/ package"
+        - "Implements Reactor<DomainEventData>"
+        - "ReactorConfig is aggregate-specific (not shared)"
+
+# ──────────────────────────────────────────────────────────────
+# Execution Instructions
+# ──────────────────────────────────────────────────────────────
+
+execution:
+  instructions: |
+    ## How to Execute This Checklist
+
+    ### L0: Deterministic Checks (this file)
+
+    Execute XR-01 through XR-07 in order. For each check:
+
+    1. Read the source files listed
+    2. Perform the verification method described
+    3. Record result as: PASS / FAIL / PARTIAL (with details)
+    4. Do NOT skip any check
+    5. Do NOT add freestyle analysis during L0
+
+    ### L0 Output Format
+
+    ```
+    ╔══════════════════════════════════════════════════════════════╗
+    ║           L0 CONSISTENCY VERIFICATION RESULTS                ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║ Check   │ Status  │ Pass │ Fail │ Details                    ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║ XR-01   │ ✅/❌   │  N   │  M   │ summary                   ║
+    ║ XR-02   │ ✅/❌   │  N   │  M   │ summary                   ║
+    ║ ...     │         │      │      │                            ║
+    ╠══════════════════════════════════════════════════════════════╣
+    ║ OVERALL │ X/7 PASS│      │      │                            ║
+    ╚══════════════════════════════════════════════════════════════╝
+    ```
+
+    ### L1: Semantic Analysis (after L0)
+
+    Only after L0 is complete, perform freestyle semantic analysis on:
+    - Areas where L0 found PARTIAL results (ambiguous)
+    - Cross-cutting concerns not covered by L0
+    - Design-level observations
+
+    L1 findings should be clearly separated from L0 results.
+
+  invocation: |
+    To run this checklist, use the prompt:
+
+      "Execute consistency-checklist.yaml L0 checks on ezddd-java skills"
+
+    To run L0 + L1:
+
+      "Execute consistency-checklist.yaml full analysis (L0 + L1)"
