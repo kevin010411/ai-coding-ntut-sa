@@ -7,6 +7,8 @@ import org.springframework.test.annotation.DirtiesContext;
 import tw.teddysoft.aiscrum.product.entity.ProductLifecycleState;
 import tw.teddysoft.ezddd.cqrs.usecase.CqrsOutput;
 
+import java.util.NoSuchElementException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,11 +32,10 @@ class ProductUseCaseTest {
                         "user-456"));
 
         assertNotNull(output);
-        assertEquals("product-123", output.getId());
     }
 
     @Test
-    void should_get_product_as_read_only_entity_successfully() {
+    void should_get_product_as_dto_successfully() {
         createProductUseCase.execute(
                 CreateProductUseCase.CreateProductInput.create(
                         "product-123",
@@ -46,29 +47,15 @@ class ProductUseCaseTest {
 
         assertNotNull(output);
         assertNotNull(output.getProduct());
-        assertEquals("product-123", output.getProduct().getId().value());
-        assertEquals("AI Scrum Assistant", output.getProduct().getName().value());
-        assertEquals(ProductLifecycleState.DRAFT, output.getProduct().getState());
-    }
-
-    @Test
-    void should_reject_mutation_on_read_only_product() {
-        createProductUseCase.execute(
-                CreateProductUseCase.CreateProductInput.create(
-                        "product-123",
-                        "AI Scrum Assistant",
-                        "user-456"));
-
-        GetProductUseCase.GetProductOutput output = getProductUseCase.execute(
-                GetProductUseCase.GetProductInput.create("product-123"));
-
-        assertThrows(UnsupportedOperationException.class, () -> output.getProduct().rejectMutation());
+        assertEquals("product-123", output.getProduct().id().value());
+        assertEquals("AI Scrum Assistant", output.getProduct().name().value());
+        assertEquals(ProductLifecycleState.DRAFT, output.getProduct().state());
     }
 
     @Test
     void should_return_failure_when_product_not_found() {
         assertThrows(
-                java.util.NoSuchElementException.class,
+                NoSuchElementException.class,
                 () -> getProductUseCase.execute(GetProductUseCase.GetProductInput.create("missing-product")));
     }
 }

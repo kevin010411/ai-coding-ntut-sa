@@ -5,21 +5,37 @@
 This skill generates Query Use Case components following CQRS read-side patterns:
 - **UseCase Interface** - Port layer (inbound port)
 - **Service Implementation** - Application service layer
-- **Repository dependency** - Load aggregate/entity state for read-only conversion
+- **Projection/outport dependency** - Load read-side state without violating Clean Architecture boundaries
 - **Read-only Entity** - Query result model
 
 Queries are **read-only** operations that never modify system state.
 
 ### Read-only Entity Rule
 
-Generate query results around read-only entities instead of DTOs.
+Generate query results around read-only entities when they preserve Clean Architecture boundaries; otherwise use DTO fallback at the outport boundary.
 
 - Return `ProductReadOnly`, `List<ProductReadOnly>`, or the spec-declared read-only entity type from the custom `CqrsOutput<T>` subclass.
-- Load the aggregate through the repository when the spec dependency is a repository, then convert the aggregate/entity to its read-only representation before setting output.
-- Do not generate DTO records, DTO projections, or `toDto(...)` mapper methods for query results.
+- Load read-side state through a CA-safe projection/outport, then convert it to a read-only response or DTO fallback before setting output.
+- Do not generate DTO records, DTO projections, or `toDto(...)` mapper methods for query results unless the Clean Architecture boundary rule requires DTO fallback for the outport.
 - Do not expose the original mutable aggregate or child entity. A mutable entity leak is still forbidden.
 - Convert nested returned entities into read-only entities.
 - Return immutable collections for entity lists and nested entity collections.
+
+### Clean Architecture Boundary Rule for Read-only Outputs
+
+Read-only output is allowed only when it preserves Clean Architecture dependency direction. Before generating a read-only entity, evaluate the boundary it crosses:
+
+- A usecase outport (`port/out/projection`, `port/out/inquiry`, repository-like port) must not expose adapter/infrastructure types, JPA persistent objects, Spring Data projections, or domain entities whose implementation would force an outer layer concern into the domain/application layer.
+- A `*ReadOnly` type must not require the mutable domain model to depend on usecase, adapter, projection, DTO, or persistence packages. Shared interfaces for proxy-style read-only views are valid only when the interface belongs to the domain model boundary and contains domain-safe query operations.
+- Inheritance-style read-only entities are valid only when extending the domain model does not introduce usecase/adapter dependencies or leak mutable state/commands across the port boundary.
+- If a read-only approach would violate these CA layer rules, do not force read-only through the outport. Use a DTO/read-model record at the outport boundary to compensate, then map inside the application layer to the safest response model.
+- The fallback DTO belongs in the usecase/application boundary (for example `{aggregate}/usecase/port/` or a dedicated DTO/readmodel package under `usecase/port`), not in adapter/infrastructure. Adapter implementations may map persistence data to that DTO before returning through the outport.
+- When DTO fallback is selected, the Query `CqrsOutput<T>` wraps the DTO or immutable list of DTOs. Do not call it a read-only entity, and do not generate read-only proxy/inheritance code for that query.
+
+Decision order:
+1. Prefer spec-declared read-only entities only if the domain/application dependency direction remains clean.
+2. If read-only would make an outport depend on the wrong layer or pull outer-layer details inward, use DTO fallback for the outport.
+3. Never expose mutable aggregate/entity instances as a shortcut.
 
 ### Read-only Entity Implementation Approaches
 
@@ -71,6 +87,7 @@ class GetProductsOutput extends CqrsOutput<GetProductsOutput> {
 | UseCase Interface | `src/main/java/{rootPackage}/{aggregate}/usecase/port/in/{UseCase}UseCase.java` |
 | Service Implementation | `src/main/java/{rootPackage}/{aggregate}/usecase/service/{UseCase}Service.java` |
 | Read-only Entity | `src/main/java/{rootPackage}/{aggregate}/entity/{Name}ReadOnly.java` |
+| DTO fallback for CA-safe outport | `src/main/java/{rootPackage}/{aggregate}/usecase/port/{Name}Dto.java` or `{Name}ReadModel.java` |
 
 ---
 
@@ -606,7 +623,7 @@ Before writing any file:
 |-------|--------------|
 | Extends Query | Interface extends `Query<Input, Output>` |
 | Uses Projection | Service injects Projection, not Repository |
-| Returns DTO | Output is DTO, not domain entity |
+| CA-safe output model | Output is read-only entity only when CA-safe; otherwise DTO fallback, never mutable domain entity |
 | No @Service | Service has no Spring annotations |
 | No @Repository | JPA Projection has no @Repository |
 
@@ -659,7 +676,7 @@ Extract from use-case.yaml:
 - `input`: Query parameters
 - `output`: Fields to return
 
-### Step 2: Generate DTO Record
+### Step 2: Generate DTO Record (only for CA fallback or DTO-spec queries)
 
 ```java
 package ${rootPackage}.${aggregateLowerCase}.usecase.port;

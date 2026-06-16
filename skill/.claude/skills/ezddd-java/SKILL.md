@@ -12,11 +12,6 @@ description: |
 
 # Java EzDDD Spring Skill
 
-## Version Policy
-
-All query use cases return read-only entities or immutable lists of read-only entities. Proxy implementations must share an interface with the domain model class; inheritance implementations must extend the original domain model class.
-
-
 這是一個**完全自包含**的 AI Coding 工具包，用於 Java + Spring Boot + ezddd 框架的開發。
 
 ## Required Project Conventions

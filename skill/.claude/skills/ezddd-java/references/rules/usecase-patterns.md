@@ -184,7 +184,8 @@ public class CommitSprintWhenSprintCreatedService implements WhenSprintCreatedCo
 | Inquiry Interface (Reactor) | `{aggregate}/usecase/port/out/inquiry/` |
 | JPA Projection (Query) | `{aggregate}/adapter/out/database/springboot/projection/` |
 | JPA Inquiry (Reactor) | `{aggregate}/adapter/out/persistence/inquiry/` |
-| ReadOnlyEntity (Query) | `{aggregate}/usecase/port/` |
+| ReadOnlyEntity (Query) | `{aggregate}/usecase/port/` only when it does not violate CA dependency direction |
+| DTO fallback for Query outport | `{aggregate}/usecase/port/` or `{aggregate}/usecase/port/readmodel/` |
 | Config | `{aggregate}/io/springboot/config/` |
 
 ```java
@@ -198,6 +199,12 @@ public class CreateProductService { }  // Should be in service/
 ```
 
 **Rationale:** Clean Architecture separates ports (interfaces) from implementations.
+
+### Query Outport Read Model Boundary
+
+For query use cases, the outport contract is part of the application boundary. It may return a read-only entity only when that type does not force dependencies from inner layers to outer layers and does not expose mutable domain state.
+
+If a read-only proxy/inheritance implementation would require domain classes to depend on usecase/adapter/read-model details, or would make the outport expose persistence/adapter types, use a DTO/read-model record in `usecase.port` as the outport return type. Adapter implementations map infrastructure data into that DTO, and the usecase service maps again only when a CA-safe read-only response model is available.
 
 ---
 

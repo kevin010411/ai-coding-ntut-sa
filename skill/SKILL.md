@@ -1,14 +1,11 @@
 ---
-name: ai-coding-exercise-skills-uc-v3-readonly-impl-rules
+name: ai-coding-exercise-skills-uc
 description: |
-  TeddySoft AI coding exercise workflow variant. Use this version to generate code where all query use cases return read-only entities, with explicit proxy shared-interface and inheritance extension rules.
+  TeddySoft AI coding exercise workflow for Java, Spring Boot, ezddd, DDD use-case execution, API consistency checks, and Scrum-domain running examples.
+  Use when the user works on the ai-coding-exercise-skills-uc project, asks to execute UC specs, generate or review ezddd Java code, check API consistency, study the TeddySoft AI Scrum exercise, or reference the bundled .dev specs, ADRs, lessons, and course materials.
 ---
 
-# AI Coding Exercise Skills UC V3 ReadOnly Impl Rules
-
-## Version Policy
-
-All query use cases return read-only entities or immutable lists of read-only entities. Proxy implementations must share an interface with the domain model class; inheritance implementations must extend the original domain model class.
+# AI Coding Exercise Skills UC
 
 This skill packages the full TeddySoft AI coding exercise repository as one Codex skill.
 

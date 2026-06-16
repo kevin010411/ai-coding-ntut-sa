@@ -279,6 +279,21 @@ mvn test -Dtest={UseCase}ControllerIntegrationTest -q
 
 ### ═══ QUERY UseCase Path ═══
 
+#### Step 4.0 — Decide Read-only vs DTO Outport (⛔ BLOCKING)
+
+Before generating read-only entities, perform a Clean Architecture boundary check:
+
+1. Identify every query outport return type from `spec.dependencies[]`, `spec.projections[]`, and `spec.readOnlyEntities[]`.
+2. Verify the outport contract does not depend on adapter/infrastructure types, JPA persistent objects, Spring Data projections, or mutable domain entities.
+3. Verify the proposed `*ReadOnly` implementation does not force the domain model to import or depend on usecase, adapter, DTO, projection, or persistence packages.
+4. If any check fails, switch that outport to DTO/read-model fallback in `usecase.port` and generate mapper logic at the adapter/application boundary.
+5. Continue with read-only entity generation only for outputs that pass the CA boundary check.
+
+**CRITICAL checks**:
+- Read-only MUST NOT override Clean Architecture dependency direction.
+- DTO fallback is REQUIRED when read-only would violate outport boundaries.
+- Mutable aggregate/entity leakage remains forbidden in all cases.
+
 #### Step 4.1 — Generate Read-only Entities
 
 ```
@@ -286,7 +301,7 @@ LOAD_PATTERNS:
   - references/patterns/usecase/query.md
 ```
 
-**SOURCE**: `spec.readOnlyEntities[]`
+**SOURCE**: `spec.readOnlyEntities[]` that passed Step 4.0
 
 **Generate**:
 1. Read-only entity classes/views
@@ -295,7 +310,7 @@ LOAD_PATTERNS:
 4. Mutation-blocking methods for any state-changing operations
 
 **CRITICAL checks**:
-- Query output MUST NOT use DTO records, DTO projections, or `toDto(...)` mappers
+- Query output MUST NOT use DTO records, DTO projections, or `toDto(...)` mappers unless Step 4.0 selected DTO fallback for CA-safe outports
 - Query output MUST NOT expose mutable aggregate/entity references
 - Query UseCase does NOT blanket catch (no `UseCaseFailureException`)
 

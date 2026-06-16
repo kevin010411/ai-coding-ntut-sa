@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-public class ProductGoal implements Entity<ProductGoalId>, ProductGoalReadable {
+public class ProductGoal implements Entity<ProductGoalId> {
 
     private final ProductGoalId id;
     private final String title;
