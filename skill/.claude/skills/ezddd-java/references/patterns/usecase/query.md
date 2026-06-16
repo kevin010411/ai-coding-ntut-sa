@@ -2,7 +2,7 @@
 
 ## Version Policy
 
-All query use cases use projection + DTO + mapper outputs. Do not use read-only entity query outputs in this version.
+Only Product get-product and get-products queries use read-only entity outputs. All other query use cases use projection + DTO + mapper outputs.
 
 
 ## Overview

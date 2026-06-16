@@ -14,7 +14,7 @@ description: |
 
 ## Version Policy
 
-All query use cases use projection + DTO + mapper outputs. Do not use read-only entity query outputs in this version.
+Only Product get-product and get-products queries use read-only entity outputs. All other query use cases use projection + DTO + mapper outputs.
 
 
 這是一個**完全自包含**的 AI Coding 工具包，用於 Java + Spring Boot + ezddd 框架的開發。

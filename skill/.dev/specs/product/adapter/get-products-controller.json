@@ -13,12 +13,13 @@
           },
           "output": {
             "type": "list",
-            "dto": "ProductDto"
+            "entity": "ProductReadOnly",
+            "itemType": "readOnlyEntity"
           }
         },
         "responses": {
           "200": { 
-            "body": "List<ProductDto>",
+            "body": "List<ProductReadOnly>",
             "description": "成功回傳所有 Products，可能為空列表"
           },
           "401": { 
@@ -47,8 +48,8 @@
     "domainExposure": {
       "pattern": "read-only-entity",
       "rules": [
-        "Controller may serialize immutable List<ProductDto> returned by GetProductsUseCase.",
-        "Controller must not map ProductDto back to ProductDto.",
+        "Controller may serialize immutable List<ProductReadOnly> returned by GetProductsUseCase.",
+        "Controller must not map ProductReadOnly back to ProductDto.",
         "Controller must not expose mutable Product entity or mutable collection."
       ]
     },
@@ -75,7 +76,7 @@
         "then": [
         "應該回傳 HTTP 200",
         "Response body 應包含所有 Products 的 List",
-        "每個 ProductDto 應包含完整資訊",
+        "每個 ProductReadOnly 應包含完整資訊",
         "不得回傳 ProductDto"
       ]
     },

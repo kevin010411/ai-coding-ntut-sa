@@ -1,20 +1,67 @@
 {
   "query": "GetProducts",
-  "behavior": "取得所有 Products 並回傳 List<ProductDto>",
+  "behavior": "取得所有 Products 並回傳 ProductReadOnly 列表，不可回傳 ProductDto 列表",
   "input": [],
-  "method": "productDtoProjection.query",
+  "method": "productRepository.findAll",
   "output": "GetProductsOutput",
   "domainModelNotes": [
     "此為查詢操作，不會修改任何 domain 狀態。",
     "應回傳所有存在的 Products，且每個 Product 都必須轉成 ProductReadOnly。",
     "回傳的 products collection 必須是 immutable collection。",
+    "Read-only Entities Pattern: Aggregate 對外回傳內部 Entity 時，必須先轉成 read-only entity，避免外部 client 直接修改 aggregate 內部狀態。",
     "不可產生 ProductDtoProjection、ProductDto、DefinitionOfDoneDto、ProductMapper.toDto(...) 或 DTO mapper 作為本 usecase 的主要回傳模型。"
   ],
   "dependencies": [
     {
-      "name": "productDtoProjection",
-      "type": "ProductDtoProjection",
-      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+      "name": "productRepository",
+      "type": "ProductRepository",
+      "note": "使用 repository 載入所有 Product aggregates，再逐一轉成 ProductReadOnly"
+    }
+  ],
+  "readOnlyEntities": [
+    {
+      "name": "ProductReadOnly",
+      "source": "Product",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "Product 的 read-only entity view，對外代表 Product domain concept，但阻擋所有狀態變更。",
+      "queryMethods": [
+        "getId() -> ProductId",
+        "getName() -> ProductName",
+        "getGoal() -> ProductGoal 或 read-only/value-object 等價查詢結果",
+        "getDefinitionOfDone() -> Optional<DefinitionOfDoneReadOnly>",
+        "getNote() -> String",
+        "getExtension() -> String",
+        "getState() -> ProductState"
+      ],
+      "blockedCommandMethods": [
+        "rename(...)",
+        "setProductGoal(...)",
+        "defineDefinitionOfDone(...)",
+        "delete(...)",
+        "markAsDelete(...)"
+      ],
+      "rules": [
+        "若採 inheritance，override 所有 state-changing methods 並 throw UnsupportedOperationException。",
+        "若採 composition proxy，內部保存 Product delegate，只 delegate read operations，mutation methods 直接拒絕。",
+        "nested DefinitionOfDone 必須包成 DefinitionOfDoneReadOnly。",
+        "不可 expose 原始 mutable Product 或 mutable child entity reference。"
+      ]
+    },
+    {
+      "name": "DefinitionOfDoneReadOnly",
+      "source": "DefinitionOfDone",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "DefinitionOfDone 的 read-only entity view。",
+      "queryMethods": [
+        "getName() -> String",
+        "getCriteria() -> List<String>",
+        "getNote() -> String",
+        "getDefinedAt() -> Instant"
+      ],
+      "rules": [
+        "criteria 必須回傳 immutable copy。",
+        "禁止任何修改 DoD state 的 public command method。"
+      ]
     }
   ],
   "testDataSetup": {
@@ -134,82 +181,6 @@
       "then": [
         "應該成功回傳包含單一 ProductReadOnly 的 immutable List",
         "該 ProductReadOnly 應包含正確的資料"
-      ]
-    }
-  ],
-  "projections": [
-    {
-      "name": "ProductDtoProjection extends Projection<ProductDtoProjectionInput, Optional<ProductDto>>",
-      "description": "查詢資料庫並回傳 Optional<ProductDto>",
-      "input": []
-    }
-  ],
-  "dataTransferObjects": [
-    {
-      "name": "ProductDto",
-      "description": "Product DTO",
-      "fields": [
-        {
-          "name": "id",
-          "type": "ProductId"
-        },
-        {
-          "name": "name",
-          "type": "ProductName"
-        },
-        {
-          "name": "goal",
-          "type": "ProductGoal 或 read-only/value-object 等價查詢結果"
-        },
-        {
-          "name": "definitionOfDone",
-          "type": "Optional<DefinitionOfDoneDto>"
-        },
-        {
-          "name": "note",
-          "type": "String"
-        },
-        {
-          "name": "extension",
-          "type": "String"
-        },
-        {
-          "name": "state",
-          "type": "ProductState"
-        }
-      ]
-    },
-    {
-      "name": "DefinitionOfDoneDto",
-      "description": "DefinitionOfDone DTO",
-      "fields": [
-        {
-          "name": "name",
-          "type": "String"
-        },
-        {
-          "name": "criteria",
-          "type": "List<String>"
-        },
-        {
-          "name": "note",
-          "type": "String"
-        },
-        {
-          "name": "definedAt",
-          "type": "Instant"
-        }
-      ]
-    }
-  ],
-  "mappers": [
-    {
-      "name": "ProductMapper",
-      "description": "Map Product entity to ProductDto",
-      "location": "product.usecase.port",
-      "critical": true,
-      "methods": [
-        "toDto(Product product) -> ProductDto"
       ]
     }
   ]

@@ -35,7 +35,7 @@ class ProductUseCaseTest {
     }
 
     @Test
-    void should_get_product_as_dto_successfully() {
+    void should_get_product_as_read_only_entity_successfully() {
         createProductUseCase.execute(
                 CreateProductUseCase.CreateProductInput.create(
                         "product-123",
@@ -47,9 +47,9 @@ class ProductUseCaseTest {
 
         assertNotNull(output);
         assertNotNull(output.getProduct());
-        assertEquals("product-123", output.getProduct().id().value());
-        assertEquals("AI Scrum Assistant", output.getProduct().name().value());
-        assertEquals(ProductLifecycleState.DRAFT, output.getProduct().state());
+        assertEquals("product-123", output.getProduct().getId().value());
+        assertEquals("AI Scrum Assistant", output.getProduct().getName().value());
+        assertEquals(ProductLifecycleState.DRAFT, output.getProduct().getState());
     }
 
     @Test

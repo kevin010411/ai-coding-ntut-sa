@@ -1,14 +1,14 @@
 ---
-name: ai-coding-exercise-skills-uc-v0-dto
+name: ai-coding-exercise-skills-uc-v1-product-readonly
 description: |
-  TeddySoft AI coding exercise workflow variant. Use this version to generate the original DTO/projection-based query code before read-only entity changes.
+  TeddySoft AI coding exercise workflow variant. Use this version to generate code where only Product get queries return read-only entities; other queries still use DTO/projection outputs.
 ---
 
-# AI Coding Exercise Skills UC V0 DTO
+# AI Coding Exercise Skills UC V1 Product ReadOnly
 
 ## Version Policy
 
-All query use cases use projection + DTO + mapper outputs. Do not use read-only entity query outputs in this version.
+Only Product get-product and get-products queries use read-only entity outputs. All other query use cases use projection + DTO + mapper outputs.
 
 This skill packages the full TeddySoft AI coding exercise repository as one Codex skill.
 

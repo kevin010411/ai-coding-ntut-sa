@@ -13,12 +13,12 @@
             "pathVars": ["productId"]
           },
           "output": {
-            "type": "dto",
-            "dto": "ProductDto"
+            "type": "readOnlyEntity",
+            "entity": "ProductReadOnly"
           }
         },
         "responses": {
-          "200": { "body": "ProductDto" },
+          "200": { "body": "ProductReadOnly" },
           "400": { "body": "ApiError" },
           "404": { "body": "ApiError" },
           "401": { "body": "ApiError" }
@@ -42,8 +42,8 @@
     "domainExposure": {
       "pattern": "read-only-entity",
       "rules": [
-        "Controller may serialize ProductDto returned by GetProductUseCase.",
-        "Controller must not map ProductDto back to ProductDto.",
+        "Controller may serialize ProductReadOnly returned by GetProductUseCase.",
+        "Controller must not map ProductReadOnly back to ProductDto.",
         "Controller must not expose mutable Product entity."
       ]
     },

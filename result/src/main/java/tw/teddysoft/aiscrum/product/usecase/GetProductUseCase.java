@@ -1,6 +1,6 @@
 package tw.teddysoft.aiscrum.product.usecase;
 
-import tw.teddysoft.aiscrum.product.usecase.port.ProductDto;
+import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnly;
 import tw.teddysoft.ezddd.cqrs.usecase.CqrsOutput;
 import tw.teddysoft.ezddd.cqrs.usecase.query.Query;
 import tw.teddysoft.ezddd.usecase.port.in.interactor.Input;
@@ -22,13 +22,13 @@ public interface GetProductUseCase extends Query<GetProductUseCase.GetProductInp
     }
 
     class GetProductOutput extends CqrsOutput<GetProductOutput> {
-        private ProductDto product;
+        private ProductReadOnly product;
 
-        public ProductDto getProduct() {
+        public ProductReadOnly getProduct() {
             return product;
         }
 
-        public GetProductOutput setProduct(ProductDto product) {
+        public GetProductOutput setProduct(ProductReadOnly product) {
             this.product = product;
             return this;
         }
