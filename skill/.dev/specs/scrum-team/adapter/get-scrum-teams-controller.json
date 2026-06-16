@@ -17,7 +17,7 @@
     "fields": [
       {
         "name": "teams",
-        "type": "List<ScrumTeamDto>",
+        "type": "List<ScrumTeamReadOnly>",
         "description": "List of Scrum teams"
       },
       {
@@ -26,8 +26,8 @@
         "description": "Total number of teams"
       }
     ],
-    "dto": {
-      "name": "ScrumTeamDto",
+    "readOnlyEntity": {
+      "name": "ScrumTeamReadOnly",
       "fields": [
         {
           "name": "teamId",
@@ -122,8 +122,8 @@
     "domainExposure": {
       "pattern": "read-only-entity",
       "rules": [
-        "Controller may serialize ScrumTeamDto values returned by GetScrumTeamsUseCase.",
-        "Controller must not map ScrumTeamDto back to ScrumTeamDto.",
+        "Controller may serialize ScrumTeamReadOnly values returned by GetScrumTeamsUseCase.",
+        "Controller must not map ScrumTeamReadOnly back to ScrumTeamDto.",
         "Controller must not expose mutable ScrumTeam entity or mutable collection."
       ]
     }

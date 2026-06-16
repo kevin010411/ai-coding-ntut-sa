@@ -9,6 +9,8 @@ import tw.teddysoft.ezddd.usecase.port.in.interactor.UseCaseFailureException;
 
 import java.util.Objects;
 
+import static tw.teddysoft.ucontract.Contract.requireNotNull;
+
 public class CreateProductService implements CreateProductUseCase {
 
     private final ProductRepository productRepository;
@@ -19,12 +21,18 @@ public class CreateProductService implements CreateProductUseCase {
 
     @Override
     public CqrsOutput<?> execute(CreateProductInput input) {
+        requireNotNull("Input", input);
+        requireNotNull("Product id", input.productId);
+        requireNotNull("Product name", input.name);
+        requireNotNull("User id", input.userId);
+
         try {
             Product product = new Product(
                     ProductId.valueOf(input.productId),
-                    ProductName.valueOf(input.name));
+                    ProductName.valueOf(input.name),
+                    input.userId);
             productRepository.save(product);
-            return CqrsOutput.create().setId(product.getId().value());
+            return CqrsOutput.create().setId(product.getId().value()).succeed();
         } catch (Exception e) {
             throw new UseCaseFailureException(e);
         }

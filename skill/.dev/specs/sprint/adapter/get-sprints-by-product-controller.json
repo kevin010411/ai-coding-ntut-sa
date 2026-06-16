@@ -16,12 +16,13 @@
           },
           "output": {
             "type": "list",
-            "dto": "SprintDto"
+            "entity": "SprintReadOnly",
+            "itemType": "readOnlyEntity"
           }
         },
         "responses": {
           "200": {
-            "body": "List<SprintDto>",
+            "body": "List<SprintReadOnly>",
             "description": "成功回傳該產品的所有 Sprint 列表"
           },
           "400": {
@@ -85,7 +86,7 @@
       "then": [
         "應該回傳 HTTP 200",
         "Response body 應包含 Sprint 的陣列",
-        "每個 SprintDto 應包含完整資訊（id, name, goal, timebox, state 等）",
+        "每個 SprintReadOnly 應包含完整資訊（id, name, goal, timebox, state 等）",
         "所有 Sprint 的 productId 應與請求的 productId 相符"
       ]
     },

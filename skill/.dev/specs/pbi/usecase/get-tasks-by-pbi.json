@@ -1,6 +1,6 @@
 {
   "query": "GetTasksByProductBacklogItem",
-  "behavior": "依據 ProductBacklogItemId 回傳該 PBI 下的所有 Tasks 作為 List<TaskDto>",
+  "behavior": "依據 ProductBacklogItemId 回傳該 PBI 下的 immutable List<TaskReadOnly>，不可回傳 TaskDto 或可變 Task entity collection",
   "input": [
     {
       "name": "pbiId",
@@ -8,14 +8,18 @@
       "note": "ProductBacklogItem 的唯一識別碼"
     }
   ],
-  "method": "taskDtoProjection.query",
+  "method": "productBacklogItemRepository.findById",
   "output": "GetTasksByProductBacklogItemOutput",
-  "domainModelNotes": [],
+  "domainModelNotes": [
+    "Read-only Entities Pattern: 對外回傳 aggregate/entity 時，必須先轉成 read-only entity，避免外部 client 直接修改內部狀態。",
+    "Output 欄位必須使用 read-only entity 或 immutable read-only entity collection。",
+    "不可產生或依賴 read-only entity projection、DTO record、toReadOnly(...) mapper 作為本 query 的主要回傳模型。"
+  ],
   "dependencies": [
     {
-      "name": "taskDtoProjection",
-      "type": "TaskDtoProjection",
-      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+      "name": "productBacklogItemRepository",
+      "type": "ProductBacklogItemRepository",
+      "note": "使用 repository 載入 aggregate/entity，並在回傳前轉成 read-only entity"
     }
   ],
   "testDataSetup": {
@@ -122,96 +126,81 @@
       ]
     }
   ],
-  "projections": [
+  "readOnlyEntities": [
     {
-      "name": "TaskDtoProjection extends Projection<TaskDtoProjectionInput, List<TaskDto>>",
-      "description": "查詢資料庫並回傳 List<TaskDto>",
-      "input": [
-        {
-          "name": "pbiId",
-          "type": "String",
-          "note": "ProductBacklogItem 的唯一識別碼"
-        }
-      ]
-    }
-  ],
-  "dataTransferObjects": [
-    {
-      "name": "TaskDto",
-      "description": "Task DTO",
-      "fields": [
-        {
-          "name": "id",
-          "type": "String"
-        },
-        {
-          "name": "pbiId",
-          "type": "String"
-        },
-        {
-          "name": "name",
-          "type": "String"
-        },
-        {
-          "name": "state",
-          "type": "String"
-        },
-        {
-          "name": "assigneeIds",
-          "type": "Set<String>"
-        },
-        {
-          "name": "estimatedHours",
-          "type": "EstimatedHoursDto"
-        },
-        {
-          "name": "remainingHours",
-          "type": "RemainingHoursDto"
-        },
-        {
-          "name": "blockedBy",
-          "type": "List<String>"
-        },
-        {
-          "name": "note",
-          "type": "String"
-        },
-        {
-          "name": "extension",
-          "type": "String"
-        }
+      "name": "TaskReadOnly",
+      "source": "Task",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "Task 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
+      "queryMethods": [
+        "getId() -> String",
+        "getPbiId() -> String",
+        "getName() -> String",
+        "getState() -> String",
+        "getAssigneeIds() -> Set<String>",
+        "getEstimatedHours() -> EstimatedHoursReadOnly",
+        "getRemainingHours() -> RemainingHoursReadOnly",
+        "getBlockedBy() -> List<String>",
+        "getNote() -> String",
+        "getExtension() -> String"
+      ],
+      "blockedCommandMethods": [
+        "rename(...)",
+        "delete(...)",
+        "markAsDelete(...)",
+        "set*(...)",
+        "define*(...)",
+        "move*(...)",
+        "estimate*(...)"
+      ],
+      "rules": [
+        "This is the primary query output model.",
+        "Keep query operations available and reject state-changing command operations.",
+        "Do not expose the original mutable entity reference.",
+        "Convert nested returned entities into read-only entities.",
+        "Return immutable collections when exposing entity collections.",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     },
     {
-      "name": "EstimatedHoursDto",
-      "description": "EstimatedHours DTO",
-      "fields": [
-        {
-          "name": "value",
-          "type": "Integer"
-        }
+      "name": "EstimatedHoursReadOnly",
+      "source": "EstimatedHours",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "EstimatedHours 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
+      "queryMethods": [
+        "getValue() -> Integer"
+      ],
+      "blockedCommandMethods": [
+        "any state-changing command method"
+      ],
+      "rules": [
+        "Keep query operations available and reject state-changing command operations.",
+        "Do not expose the original mutable entity reference.",
+        "Convert nested returned entities into read-only entities.",
+        "Return immutable collections when exposing entity collections.",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     },
     {
-      "name": "RemainingHoursDto",
-      "description": "RemainingHours DTO",
-      "fields": [
-        {
-          "name": "value",
-          "type": "Integer"
-        }
-      ]
-    }
-  ],
-  "mappers": [
-    {
-      "name": "TaskMapper",
-      "description": "Map Task entity to TaskDto",
-      "location": "pbi.usecase.port",
-      "critical": true,
-      "methods": [
-        "toDto(Task task) -> TaskDto",
-        "toDtoList(List<Task> tasks) -> List<TaskDto>"
+      "name": "RemainingHoursReadOnly",
+      "source": "RemainingHours",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "RemainingHours 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
+      "queryMethods": [
+        "getValue() -> Integer"
+      ],
+      "blockedCommandMethods": [
+        "any state-changing command method"
+      ],
+      "rules": [
+        "Keep query operations available and reject state-changing command operations.",
+        "Do not expose the original mutable entity reference.",
+        "Convert nested returned entities into read-only entities.",
+        "Return immutable collections when exposing entity collections.",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     }
   ]

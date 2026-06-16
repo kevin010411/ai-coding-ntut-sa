@@ -59,6 +59,7 @@ COMMAND sub-types (based on `method` field):
 | `spec.dependencies[]` | Repository dependencies used to load aggregate/entity state | — |
 | `spec.readOnlyEntities[]` | Read-only entity classes/views used as query result models | `patterns/usecase/query.md`, `patterns/domain/entity.md` |
 | `spec.readOnlyEntities[].source` | Mutable aggregate/entity protected by the read-only view | — |
+| `spec.readOnlyEntities[].implementationApproach` | `proxy`/composition requires a shared query interface implemented by both the domain model class and read-only proxy; `inheritance` requires the read-only entity to extend the original domain model class | `patterns/domain/entity.md` |
 | `spec.readOnlyEntities[].queryMethods[]` | Public read methods to expose | — |
 | `spec.readOnlyEntities[].blockedCommandMethods[]` | State-changing methods to reject | — |
 | `spec.readOnlyEntities[].rules[]` | Encapsulation and immutable collection rules | — |

@@ -44,7 +44,9 @@
         "若採 inheritance，override 所有 state-changing methods 並 throw UnsupportedOperationException。",
         "若採 composition proxy，內部保存 Product delegate，只 delegate read operations，mutation methods 直接拒絕。",
         "nested DefinitionOfDone 必須包成 DefinitionOfDoneReadOnly。",
-        "不可 expose 原始 mutable Product 或 mutable child entity reference。"
+        "不可 expose 原始 mutable Product 或 mutable child entity reference。",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     },
     {
@@ -60,7 +62,9 @@
       ],
       "rules": [
         "criteria 必須回傳 immutable copy。",
-        "禁止任何修改 DoD state 的 public command method。"
+        "禁止任何修改 DoD state 的 public command method。",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     }
   ],

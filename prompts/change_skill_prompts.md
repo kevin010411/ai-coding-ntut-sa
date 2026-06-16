@@ -49,3 +49,6 @@ Create a wrapper around the Entity:
 - Prevents external clients from modifying internal state.
 - Keeps the returned object aligned with the domain model.
 - Provides immediate feedback when invalid modifications are attempted.
+
+3. 請把整個skill中使用dto的地方都改成readonly entity
+4. 幫我修改AI Coding Exercise Skills UC，在使用readonly時需要確保沒有違反CA的跨層原則，如果違反，需要使用DtO彌補outport

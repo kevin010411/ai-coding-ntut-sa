@@ -15,13 +15,13 @@
             ]
           },
           "output": {
-            "type": "dto",
-            "dto": "SprintDto"
+            "type": "readOnlyEntity",
+            "entity": "SprintReadOnly"
           }
         },
         "responses": {
           "200": {
-            "body": "SprintDto",
+            "body": "SprintReadOnly",
             "description": "成功回傳 Sprint 資訊"
           },
           "400": {
@@ -88,8 +88,8 @@
       "when": "GET /v1/api/sprints/{sprintId}",
       "then": [
         "應該回傳 HTTP 200",
-        "Response body 應包含完整的 SprintDto",
-        "SprintDto 應包含 id, sprintGoal, timebox 等資訊"
+        "Response body 應包含完整的 SprintReadOnly",
+        "SprintReadOnly 應包含 id, sprintGoal, timebox 等資訊"
       ]
     },
     {

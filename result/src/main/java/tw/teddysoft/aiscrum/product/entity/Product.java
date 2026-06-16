@@ -9,7 +9,7 @@ import java.util.UUID;
 import static tw.teddysoft.ucontract.Contract.ensure;
 import static tw.teddysoft.ucontract.Contract.requireNotNull;
 
-public class Product extends EsAggregateRoot<ProductId, ProductEvents> {
+public class Product extends EsAggregateRoot<ProductId, ProductEvents> implements ProductReadable {
 
     private ProductId id;
     private ProductName name;
@@ -19,8 +19,17 @@ public class Product extends EsAggregateRoot<ProductId, ProductEvents> {
     private ProductLifecycleState state;
 
     public Product(ProductId id, ProductName name) {
+        this(id, name, null);
+    }
+
+    public Product(ProductId id, ProductName name, String userId) {
         requireNotNull("id", id);
         requireNotNull("name", name);
+
+        HashMap<String, String> metadata = new HashMap<>();
+        if (userId != null) {
+            metadata.put("userId", userId);
+        }
 
         apply(new ProductEvents.ProductCreated(
                 id,
@@ -29,7 +38,7 @@ public class Product extends EsAggregateRoot<ProductId, ProductEvents> {
                 null,
                 null,
                 ProductLifecycleState.DRAFT,
-                new HashMap<>(),
+                metadata,
                 UUID.randomUUID(),
                 DateProvider.now()));
 

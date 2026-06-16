@@ -1,10 +1,5 @@
 # Query Use Case Generation Skill
 
-## Version Policy
-
-Only Product get-product and get-products queries use read-only entity outputs. All other query use cases use projection + DTO + mapper outputs.
-
-
 ## Overview
 
 This skill generates Query Use Case components following CQRS read-side patterns:
@@ -25,6 +20,21 @@ Generate query results around read-only entities instead of DTOs.
 - Do not expose the original mutable aggregate or child entity. A mutable entity leak is still forbidden.
 - Convert nested returned entities into read-only entities.
 - Return immutable collections for entity lists and nested entity collections.
+
+### Read-only Entity Implementation Approaches
+
+Every read-only entity must use one of these two implementation approaches:
+
+1. **Proxy / composition approach**
+   - The read-only entity wraps the original domain model object.
+   - The read-only entity and the original domain model class must share a common interface that declares the allowed query operations.
+   - The proxy implements that shared interface, delegates query operations to the wrapped domain model object, and rejects or omits state-changing command operations.
+   - Never expose the wrapped mutable domain model object through a getter.
+
+2. **Inheritance approach**
+   - The read-only entity class must extend the original domain model class.
+   - Override every state-changing command method to throw `UnsupportedOperationException` or an equivalent domain protection exception.
+   - Override query methods that return entities or entity collections so they return read-only entities and immutable collections.
 
 ```java
 class GetProductOutput extends CqrsOutput<GetProductOutput> {

@@ -1,14 +1,14 @@
 ---
-name: ai-coding-exercise-skills-uc-v1-product-readonly
+name: ai-coding-exercise-skills-uc-v3-readonly-impl-rules
 description: |
-  TeddySoft AI coding exercise workflow variant. Use this version to generate code where only Product get queries return read-only entities; other queries still use DTO/projection outputs.
+  TeddySoft AI coding exercise workflow variant. Use this version to generate code where all query use cases return read-only entities, with explicit proxy shared-interface and inheritance extension rules.
 ---
 
-# AI Coding Exercise Skills UC V1 Product ReadOnly
+# AI Coding Exercise Skills UC V3 ReadOnly Impl Rules
 
 ## Version Policy
 
-Only Product get-product and get-products queries use read-only entity outputs. All other query use cases use projection + DTO + mapper outputs.
+All query use cases return read-only entities or immutable lists of read-only entities. Proxy implementations must share an interface with the domain model class; inheritance implementations must extend the original domain model class.
 
 This skill packages the full TeddySoft AI coding exercise repository as one Codex skill.
 

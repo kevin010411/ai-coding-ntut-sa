@@ -1,6 +1,6 @@
 package tw.teddysoft.aiscrum.product.usecase;
 
-import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnly;
+import tw.teddysoft.aiscrum.product.entity.ProductReadOnly;
 import tw.teddysoft.ezddd.cqrs.usecase.CqrsOutput;
 import tw.teddysoft.ezddd.cqrs.usecase.query.Query;
 import tw.teddysoft.ezddd.usecase.port.in.interactor.Input;

@@ -7,8 +7,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import tw.teddysoft.aiscrum.product.entity.ProductLifecycleState;
 import tw.teddysoft.ezddd.cqrs.usecase.CqrsOutput;
 
-import java.util.NoSuchElementException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,6 +30,7 @@ class ProductUseCaseTest {
                         "user-456"));
 
         assertNotNull(output);
+        assertEquals("product-123", output.getId());
     }
 
     @Test
@@ -53,9 +52,23 @@ class ProductUseCaseTest {
     }
 
     @Test
+    void should_reject_mutation_on_read_only_product() {
+        createProductUseCase.execute(
+                CreateProductUseCase.CreateProductInput.create(
+                        "product-123",
+                        "AI Scrum Assistant",
+                        "user-456"));
+
+        GetProductUseCase.GetProductOutput output = getProductUseCase.execute(
+                GetProductUseCase.GetProductInput.create("product-123"));
+
+        assertThrows(UnsupportedOperationException.class, () -> output.getProduct().rejectMutation());
+    }
+
+    @Test
     void should_return_failure_when_product_not_found() {
         assertThrows(
-                NoSuchElementException.class,
+                java.util.NoSuchElementException.class,
                 () -> getProductUseCase.execute(GetProductUseCase.GetProductInput.create("missing-product")));
     }
 }

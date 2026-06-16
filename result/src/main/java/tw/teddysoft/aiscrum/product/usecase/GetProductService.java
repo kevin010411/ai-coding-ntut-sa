@@ -1,26 +1,24 @@
 package tw.teddysoft.aiscrum.product.usecase;
 
-import tw.teddysoft.aiscrum.product.entity.ProductId;
-import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnly;
-import tw.teddysoft.aiscrum.product.usecase.port.ProductRepository;
-
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnlyProjection;
+import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnlyProjectionInput;
+
 public class GetProductService implements GetProductUseCase {
 
-    private final ProductRepository productRepository;
+    private final ProductReadOnlyProjection productReadOnlyProjection;
 
-    public GetProductService(ProductRepository productRepository) {
-        this.productRepository = Objects.requireNonNull(productRepository);
+    public GetProductService(ProductReadOnlyProjection productReadOnlyProjection) {
+        this.productReadOnlyProjection = Objects.requireNonNull(productReadOnlyProjection);
     }
 
     @Override
     public GetProductOutput execute(GetProductInput input) {
-        return productRepository.findById(ProductId.valueOf(input.productId))
-                .map(ProductReadOnly::from)
-                .map(readOnlyProduct -> new GetProductOutput()
-                        .setProduct(readOnlyProduct)
+        return productReadOnlyProjection.query(new ProductReadOnlyProjectionInput(input.productId))
+                .map(product -> new GetProductOutput()
+                        .setProduct(product)
                         .setId(input.productId)
                         .succeed())
                 .orElseThrow(() -> new NoSuchElementException("Product not found: " + input.productId));

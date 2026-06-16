@@ -179,6 +179,59 @@ public class Plan extends EsAggregateRoot<PlanId, PlanEvents> {
 }
 ```
 
+### Category 4: Read-only Entity
+
+**Use for:** Query outputs that expose aggregate/entity state without allowing external clients to mutate aggregate internals.
+
+Read-only entities must use one of these two approaches:
+
+#### Proxy / Composition
+
+- Define a shared interface for the domain model class and read-only entity, containing only query operations.
+- Make the original domain model class implement that interface.
+- Make the read-only proxy implement the same interface and wrap the original domain model object internally.
+- Delegate query methods to the wrapped object.
+- Reject or omit mutation methods; never expose the wrapped mutable object.
+
+```java
+public interface TaskView {
+    TaskId getId();
+    String getName();
+    TaskState getState();
+}
+
+public class Task implements TaskView {
+    // Domain command methods remain on Task.
+}
+
+public final class TaskReadOnly implements TaskView {
+    private final Task task;
+
+    public TaskReadOnly(Task task) {
+        this.task = Objects.requireNonNull(task, "Task cannot be null");
+    }
+
+    public TaskId getId() { return task.getId(); }
+    public String getName() { return task.getName(); }
+    public TaskState getState() { return task.getState(); }
+}
+```
+
+#### Inheritance
+
+- Make the read-only entity extend the original domain model class.
+- Override every state-changing command method to throw `UnsupportedOperationException` or an equivalent domain protection exception.
+- Override query methods returning entities or collections so nested values are read-only and collections are immutable.
+
+```java
+public class TaskReadOnly extends Task {
+    @Override
+    public void rename(String newName) {
+        throw new UnsupportedOperationException("TaskReadOnly cannot be mutated");
+    }
+}
+```
+
 ---
 
 ## CRITICAL RULES (Embedded - Cannot Be Skipped)

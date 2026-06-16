@@ -16,7 +16,8 @@
           "output": {
             "mode": "sync-200",
             "type": "list",
-            "dto": "UserDto"
+            "entity": "UserReadOnly",
+            "itemType": "readOnlyEntity"
           }
         },
         "produces": [
@@ -24,7 +25,7 @@
         ],
         "responses": {
           "200": {
-            "body": "List<UserDto>"
+            "body": "List<UserReadOnly>"
           },
           "401": {
             "body": "ApiError"
@@ -53,9 +54,9 @@
     ]
   },
   "contracts": {
-    "dtos": [
+    "readOnlyEntities": [
       {
-        "name": "UserDto",
+        "name": "UserReadOnly",
         "fields": [
           {
             "name": "id",
@@ -105,8 +106,8 @@
     "domainExposure": {
       "pattern": "read-only-entity",
       "rules": [
-        "Controller may serialize immutable List<UserDto> returned by GetUsersUseCase.",
-        "Controller must not map UserDto back to UserDto.",
+        "Controller may serialize immutable List<UserReadOnly> returned by GetUsersUseCase.",
+        "Controller must not map UserReadOnly back to UserDto.",
         "Controller must not expose mutable User entity or mutable collection."
       ]
     }

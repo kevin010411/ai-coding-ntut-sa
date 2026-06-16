@@ -1,18 +1,21 @@
 {
   "query": "GetScrumTeams",
-  "behavior": "取得所有 Scrum Teams 列表並回傳 List<ScrumTeamDto>",
+  "behavior": "取得所有 Scrum Teams 並回傳 immutable List<ScrumTeamReadOnly>，不可回傳 ScrumTeamDto 或可變 ScrumTeam entity collection",
   "input": [],
-  "method": "scrumTeamDtoProjection.query",
+  "method": "scrumTeamRepository.findAll",
   "output": "GetScrumTeamsOutput",
   "domainModelNotes": [
     "此為查詢操作，不會修改任何 domain 狀態",
-    "應回傳所有存在的 Scrum Teams"
+    "應回傳所有存在的 Scrum Teams",
+    "Read-only Entities Pattern: 對外回傳 aggregate/entity 時，必須先轉成 read-only entity，避免外部 client 直接修改內部狀態。",
+    "Output 欄位必須使用 read-only entity 或 immutable read-only entity collection。",
+    "不可產生或依賴 read-only entity projection、DTO record、toReadOnly(...) mapper 作為本 query 的主要回傳模型。"
   ],
   "dependencies": [
     {
-      "name": "scrumTeamDtoProjection",
-      "type": "ScrumTeamDtoProjection",
-      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+      "name": "scrumTeamRepository",
+      "type": "ScrumTeamRepository",
+      "note": "使用 repository 載入 aggregate/entity，並在回傳前轉成 read-only entity"
     }
   ],
   "testScenarios": [
@@ -34,50 +37,36 @@
       ]
     }
   ],
-  "projections": [
+  "readOnlyEntities": [
     {
-      "name": "ScrumTeamDtoProjection extends Projection<ScrumTeamDtoProjectionInput, List<ScrumTeamDto>>",
-      "description": "查詢資料庫並回傳 List<ScrumTeamDto>",
-      "input": []
-    }
-  ],
-  "dataTransferObjects": [
-    {
-      "name": "ScrumTeamDto",
-      "description": "ScrumTeam DTO",
-      "fields": [
-        {
-          "name": "teamId",
-          "type": "String"
-        },
-        {
-          "name": "name",
-          "type": "String"
-        },
-        {
-          "name": "description",
-          "type": "String"
-        },
-        {
-          "name": "memberCount",
-          "type": "int"
-        },
-        {
-          "name": "createdAt",
-          "type": "String"
-        }
-      ]
-    }
-  ],
-  "mappers": [
-    {
-      "name": "ScrumTeamMapper",
-      "description": "Map ScrumTeam entity to ScrumTeamDto",
-      "location": "scrum-team.usecase.port",
-      "critical": true,
-      "methods": [
-        "toDto(ScrumTeam scrumTeam) -> ScrumTeamDto",
-        "toDtoList(List<ScrumTeam> scrumTeams) -> List<ScrumTeamDto>"
+      "name": "ScrumTeamReadOnly",
+      "source": "ScrumTeam",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "ScrumTeam 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
+      "queryMethods": [
+        "getTeamId() -> String",
+        "getName() -> String",
+        "getDescription() -> String",
+        "getMemberCount() -> int",
+        "getCreatedAt() -> String"
+      ],
+      "blockedCommandMethods": [
+        "rename(...)",
+        "delete(...)",
+        "markAsDelete(...)",
+        "set*(...)",
+        "define*(...)",
+        "move*(...)",
+        "estimate*(...)"
+      ],
+      "rules": [
+        "This is the primary query output model.",
+        "Keep query operations available and reject state-changing command operations.",
+        "Do not expose the original mutable entity reference.",
+        "Convert nested returned entities into read-only entities.",
+        "Return immutable collections when exposing entity collections.",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     }
   ]

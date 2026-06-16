@@ -1,6 +1,6 @@
 {
   "query": "GetBacklogItemsBySprint",
-  "behavior": "依據 SprintId 回傳該 Sprint 內的所有 ProductBacklogItemDto 列表",
+  "behavior": "依據 SprintId 回傳該 Sprint 內的 immutable List<ProductBacklogItemReadOnly>，不可回傳 ProductBacklogItemDto 或可變 ProductBacklogItem entity collection",
   "input": [
     {
       "name": "sprintId",
@@ -8,18 +8,21 @@
       "note": "Sprint 的唯一識別碼"
     }
   ],
-  "method": "productBacklogItemDtoProjection.query",
-  "output": "GetBacklogItemsBySprintOutput<List<ProductBacklogItemDto>>",
+  "method": "productBacklogItemRepository.findBySprintId",
+  "output": "GetBacklogItemsBySprintOutput<List<ProductBacklogItemReadOnly>>",
   "domainModelNotes": [
     "查詢特定 Sprint 內的所有 PBIs",
     "如果 Sprint 不存在或沒有 PBIs，回傳空列表",
-    "PBIs 應按照 orderId 排序"
+    "PBIs 應按照 orderId 排序",
+    "Read-only Entities Pattern: 對外回傳 aggregate/entity 時，必須先轉成 read-only entity，避免外部 client 直接修改內部狀態。",
+    "Output 欄位必須使用 read-only entity 或 immutable read-only entity collection。",
+    "不可產生或依賴 read-only entity projection、DTO record、toReadOnly(...) mapper 作為本 query 的主要回傳模型。"
   ],
   "dependencies": [
     {
-      "name": "productBacklogItemDtoProjection",
-      "type": "ProductBacklogItemDtoProjection",
-      "note": "使用 projection 查詢資料庫並回傳 DTO 結果"
+      "name": "productBacklogItemRepository",
+      "type": "ProductBacklogItemRepository",
+      "note": "使用 repository 載入 aggregate/entity，並在回傳前轉成 read-only entity"
     }
   ],
   "testDataSetup": {
@@ -137,110 +140,67 @@
       ]
     }
   ],
-  "projections": [
+  "readOnlyEntities": [
     {
-      "name": "ProductBacklogItemDtoProjection extends Projection<ProductBacklogItemDtoProjectionInput, List<ProductBacklogItemDto>>",
-      "description": "查詢資料庫並回傳 List<ProductBacklogItemDto>",
-      "input": [
-        {
-          "name": "sprintId",
-          "type": "String",
-          "note": "Sprint 的唯一識別碼"
-        }
-      ]
-    }
-  ],
-  "dataTransferObjects": [
-    {
-      "name": "ProductBacklogItemDto",
-      "description": "ProductBacklogItem DTO",
-      "fields": [
-        {
-          "name": "id",
-          "type": "String"
-        },
-        {
-          "name": "productId",
-          "type": "String"
-        },
-        {
-          "name": "name",
-          "type": "String"
-        },
-        {
-          "name": "description",
-          "type": "String"
-        },
-        {
-          "name": "sprintId",
-          "type": "String"
-        },
-        {
-          "name": "estimate",
-          "type": "EstimateDto"
-        },
-        {
-          "name": "importance",
-          "type": "String"
-        },
-        {
-          "name": "state",
-          "type": "String"
-        },
-        {
-          "name": "orderId",
-          "type": "Integer"
-        },
-        {
-          "name": "tasks",
-          "type": "List<TaskDto>"
-        },
-        {
-          "name": "note",
-          "type": "String"
-        },
-        {
-          "name": "creatorId",
-          "type": "String"
-        },
-        {
-          "name": "createdAt",
-          "type": "Instant"
-        },
-        {
-          "name": "extension",
-          "type": "String"
-        }
+      "name": "ProductBacklogItemReadOnly",
+      "source": "ProductBacklogItem",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "ProductBacklogItem 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
+      "queryMethods": [
+        "getId() -> String",
+        "getProductId() -> String",
+        "getName() -> String",
+        "getDescription() -> String",
+        "getSprintId() -> String",
+        "getEstimate() -> EstimateReadOnly",
+        "getImportance() -> String",
+        "getState() -> String",
+        "getOrderId() -> Integer",
+        "getTasks() -> List<TaskReadOnly>",
+        "getNote() -> String",
+        "getCreatorId() -> String",
+        "getCreatedAt() -> Instant",
+        "getExtension() -> String"
+      ],
+      "blockedCommandMethods": [
+        "rename(...)",
+        "delete(...)",
+        "markAsDelete(...)",
+        "set*(...)",
+        "define*(...)",
+        "move*(...)",
+        "estimate*(...)"
+      ],
+      "rules": [
+        "This is the primary query output model.",
+        "Keep query operations available and reject state-changing command operations.",
+        "Do not expose the original mutable entity reference.",
+        "Convert nested returned entities into read-only entities.",
+        "Return immutable collections when exposing entity collections.",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     },
     {
-      "name": "EstimateDto",
-      "description": "Estimate DTO",
-      "fields": [
-        {
-          "name": "points",
-          "type": "Integer"
-        },
-        {
-          "name": "type",
-          "type": "String"
-        },
-        {
-          "name": "confidence",
-          "type": "String"
-        }
-      ]
-    }
-  ],
-  "mappers": [
-    {
-      "name": "ProductBacklogItemMapper",
-      "description": "Map ProductBacklogItem entity to ProductBacklogItemDto",
-      "location": "pbi.usecase.port",
-      "critical": true,
-      "methods": [
-        "toDto(ProductBacklogItem productBacklogItem) -> ProductBacklogItemDto",
-        "toDtoList(List<ProductBacklogItem> productBacklogItems) -> List<ProductBacklogItemDto>"
+      "name": "EstimateReadOnly",
+      "source": "Estimate",
+      "implementationApproach": "inheritance-or-composition",
+      "description": "Estimate 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
+      "queryMethods": [
+        "getPoints() -> Integer",
+        "getType() -> String",
+        "getConfidence() -> String"
+      ],
+      "blockedCommandMethods": [
+        "any state-changing command method"
+      ],
+      "rules": [
+        "Keep query operations available and reject state-changing command operations.",
+        "Do not expose the original mutable entity reference.",
+        "Convert nested returned entities into read-only entities.",
+        "Return immutable collections when exposing entity collections.",
+        "Proxy/composition implementation must define a shared query interface implemented by both the original domain model class and the read-only proxy.",
+        "Inheritance implementation must make the read-only entity extend the original domain model class."
       ]
     }
   ]

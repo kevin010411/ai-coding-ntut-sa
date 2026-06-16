@@ -16,12 +16,13 @@
           },
           "output": {
             "type": "list",
-            "dto": "ProductBacklogItemDto"
+            "entity": "ProductBacklogItemReadOnly",
+            "itemType": "readOnlyEntity"
           }
         },
         "responses": {
           "200": {
-            "body": "List<ProductBacklogItemDto>"
+            "body": "List<ProductBacklogItemReadOnly>"
           },
           "400": {
             "body": "ApiError"
@@ -83,8 +84,8 @@
       "when": "GET /v1/api/sprints/{sprintId}/pbis",
       "then": [
         "Returns HTTP 200",
-        "Response body contains List<ProductBacklogItemDto>",
-        "Each ProductBacklogItemDto contains all required fields",
+        "Response body contains List<ProductBacklogItemReadOnly>",
+        "Each ProductBacklogItemReadOnly contains all required fields",
         "PBIs are sorted by orderId",
         "Content-Type is application/json"
       ]
@@ -135,8 +136,8 @@
       "when": "GET /v1/api/sprints/{sprintId}/pbis",
       "then": [
         "Returns HTTP 200",
-        "PBIs with estimates include EstimateDto",
-        "EstimateDto contains points, type, and confidence"
+        "PBIs with estimates include EstimateReadOnly",
+        "EstimateReadOnly contains points, type, and confidence"
       ]
     }
   ],
@@ -165,7 +166,7 @@
           "validation": "@NotBlank"
         }
       ],
-      "returnType": "ResponseEntity<List<ProductBacklogItemDto>>"
+      "returnType": "ResponseEntity<List<ProductBacklogItemReadOnly>>"
     }
   },
   "notes": [
