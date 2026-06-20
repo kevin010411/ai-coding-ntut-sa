@@ -1,6 +1,5 @@
 package tw.teddysoft.aiscrum.product.usecase;
 
-import tw.teddysoft.aiscrum.product.entity.Product;
 import tw.teddysoft.aiscrum.product.entity.ProductId;
 import tw.teddysoft.aiscrum.product.entity.ProductName;
 import tw.teddysoft.aiscrum.product.usecase.port.ProductRepository;
@@ -12,31 +11,32 @@ import java.util.Objects;
 
 import static tw.teddysoft.ucontract.Contract.requireNotNull;
 
-public class CreateProductService implements CreateProductUseCase {
+public class RenameProductService implements RenameProductUseCase {
 
     private final ProductRepository productRepository;
 
-    public CreateProductService(ProductRepository productRepository) {
+    public RenameProductService(ProductRepository productRepository) {
         this.productRepository = Objects.requireNonNull(productRepository);
     }
 
     @Override
-    public CqrsOutput<?> execute(CreateProductInput input) {
+    public CqrsOutput<?> execute(RenameProductInput input) {
         requireNotNull("Input", input);
         requireNotNull("Product id", input.productId);
-        requireNotNull("Product name", input.name);
+        requireNotNull("New name", input.newName);
         requireNotNull("User id", input.userId);
 
         try {
             ProductId productId = ProductId.valueOf(input.productId);
-            if (productRepository.findById(productId).isPresent()) {
+            var product = productRepository.findById(productId).orElse(null);
+            if (product == null) {
                 return CqrsOutput.create()
                         .setId(input.productId)
-                        .setMessage("Create product failed: product already exists, product id = " + input.productId)
+                        .setMessage("Rename product failed: product not found, product id = " + input.productId)
                         .setExitCode(ExitCode.FAILURE);
             }
 
-            Product product = new Product(productId, ProductName.valueOf(input.name));
+            product.rename(ProductName.valueOf(input.newName), input.userId);
             productRepository.save(product);
             return CqrsOutput.create()
                     .setId(input.productId)

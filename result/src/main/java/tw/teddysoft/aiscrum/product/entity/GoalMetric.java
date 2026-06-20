@@ -14,9 +14,9 @@ public record GoalMetric(
 ) implements ValueObject {
 
     public GoalMetric {
-        Objects.requireNonNull(name, "GoalMetric name cannot be null");
-        Objects.requireNonNull(unit, "GoalMetric unit cannot be null");
-        Objects.requireNonNull(targetValue, "GoalMetric targetValue cannot be null");
-        Objects.requireNonNull(currentValue, "GoalMetric currentValue cannot be null");
+        Objects.requireNonNull(name, "name cannot be null");
+        Objects.requireNonNull(unit, "unit cannot be null");
+        Objects.requireNonNull(targetValue, "targetValue cannot be null");
+        Objects.requireNonNull(currentValue, "currentValue cannot be null");
     }
 }

@@ -1,12 +1,10 @@
 package tw.teddysoft.aiscrum.product.entity;
 
-import tw.teddysoft.ezddd.entity.Entity;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-public class ProductGoal implements Entity<ProductGoalId> {
+public class ProductGoal {
 
     private final ProductGoalId id;
     private final String title;
@@ -24,16 +22,15 @@ public class ProductGoal implements Entity<ProductGoalId> {
             Instant definedAt,
             Instant revisedAt,
             ProductGoalState state) {
-        this.id = Objects.requireNonNull(id, "ProductGoal id cannot be null");
-        this.title = Objects.requireNonNull(title, "ProductGoal title cannot be null");
-        this.description = Objects.requireNonNull(description, "ProductGoal description cannot be null");
-        this.metrics = List.copyOf(Objects.requireNonNull(metrics, "ProductGoal metrics cannot be null"));
-        this.definedAt = Objects.requireNonNull(definedAt, "ProductGoal definedAt cannot be null");
+        this.id = Objects.requireNonNull(id);
+        this.title = Objects.requireNonNull(title);
+        this.description = description;
+        this.metrics = List.copyOf(Objects.requireNonNull(metrics));
+        this.definedAt = Objects.requireNonNull(definedAt);
         this.revisedAt = revisedAt;
-        this.state = Objects.requireNonNull(state, "ProductGoal state cannot be null");
+        this.state = Objects.requireNonNull(state);
     }
 
-    @Override
     public ProductGoalId getId() {
         return id;
     }
@@ -47,7 +44,7 @@ public class ProductGoal implements Entity<ProductGoalId> {
     }
 
     public List<GoalMetric> getMetrics() {
-        return metrics;
+        return List.copyOf(metrics);
     }
 
     public Instant getDefinedAt() {

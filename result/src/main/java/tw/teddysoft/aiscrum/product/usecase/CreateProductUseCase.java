@@ -11,16 +11,16 @@ public interface CreateProductUseCase extends Command<CreateProductUseCase.Creat
         public String name;
         public String userId;
 
+        public static CreateProductInput create() {
+            return new CreateProductInput();
+        }
+
         public static CreateProductInput create(String productId, String name, String userId) {
-            CreateProductInput input = new CreateProductInput();
+            CreateProductInput input = create();
             input.productId = productId;
             input.name = name;
             input.userId = userId;
             return input;
-        }
-
-        public static CreateProductInput create() {
-            return new CreateProductInput();
         }
     }
 }

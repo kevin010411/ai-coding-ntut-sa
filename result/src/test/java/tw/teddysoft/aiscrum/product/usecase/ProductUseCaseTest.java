@@ -5,15 +5,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import tw.teddysoft.aiscrum.product.entity.ProductLifecycleState;
+import tw.teddysoft.aiscrum.product.entity.ProductName;
 import tw.teddysoft.ezddd.cqrs.usecase.CqrsOutput;
-
-import java.util.NoSuchElementException;
+import tw.teddysoft.ezddd.usecase.port.in.interactor.ExitCode;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
+@SpringBootTest(properties = "spring.profiles.active=test-inmemory")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class ProductUseCaseTest {
 
@@ -23,6 +23,9 @@ class ProductUseCaseTest {
     @Autowired
     private GetProductUseCase getProductUseCase;
 
+    @Autowired
+    private RenameProductUseCase renameProductUseCase;
+
     @Test
     void should_create_product_successfully() {
         CqrsOutput<?> output = createProductUseCase.execute(
@@ -31,11 +34,12 @@ class ProductUseCaseTest {
                         "AI Scrum Assistant",
                         "user-456"));
 
-        assertNotNull(output);
+        assertEquals(ExitCode.SUCCESS, output.getExitCode());
+        assertEquals("product-123", output.getId());
     }
 
     @Test
-    void should_get_product_as_dto_successfully() {
+    void should_get_product_as_read_only_entity_successfully() {
         createProductUseCase.execute(
                 CreateProductUseCase.CreateProductInput.create(
                         "product-123",
@@ -45,17 +49,65 @@ class ProductUseCaseTest {
         GetProductUseCase.GetProductOutput output = getProductUseCase.execute(
                 GetProductUseCase.GetProductInput.create("product-123"));
 
-        assertNotNull(output);
-        assertNotNull(output.getProduct());
-        assertEquals("product-123", output.getProduct().id().value());
-        assertEquals("AI Scrum Assistant", output.getProduct().name().value());
-        assertEquals(ProductLifecycleState.DRAFT, output.getProduct().state());
+        assertEquals(ExitCode.SUCCESS, output.getExitCode());
+        assertNotNull(output.getReadonlyProduct());
+        assertEquals("product-123", output.getReadonlyProduct().getId().value());
+        assertEquals("AI Scrum Assistant", output.getReadonlyProduct().getName().value());
+        assertEquals(ProductLifecycleState.DRAFT, output.getReadonlyProduct().getState());
+    }
+
+    @Test
+    void should_reject_mutation_on_read_only_product() {
+        createProductUseCase.execute(
+                CreateProductUseCase.CreateProductInput.create(
+                        "product-123",
+                        "AI Scrum Assistant",
+                        "user-456"));
+
+        GetProductUseCase.GetProductOutput output = getProductUseCase.execute(
+                GetProductUseCase.GetProductInput.create("product-123"));
+
+        assertThrows(UnsupportedOperationException.class,
+                () -> output.getReadonlyProduct().rename(ProductName.valueOf("Blocked"), "user-456"));
+    }
+
+    @Test
+    void should_rename_product_successfully() {
+        createProductUseCase.execute(
+                CreateProductUseCase.CreateProductInput.create(
+                        "product-123",
+                        "AI Scrum Assistant",
+                        "user-456"));
+
+        CqrsOutput<?> renameOutput = renameProductUseCase.execute(
+                RenameProductUseCase.RenameProductInput.create(
+                        "product-123",
+                        "AI Scrum Coach",
+                        "user-456"));
+
+        GetProductUseCase.GetProductOutput output = getProductUseCase.execute(
+                GetProductUseCase.GetProductInput.create("product-123"));
+
+        assertEquals(ExitCode.SUCCESS, renameOutput.getExitCode());
+        assertEquals("AI Scrum Coach", output.getReadonlyProduct().getName().value());
     }
 
     @Test
     void should_return_failure_when_product_not_found() {
-        assertThrows(
-                NoSuchElementException.class,
-                () -> getProductUseCase.execute(GetProductUseCase.GetProductInput.create("missing-product")));
+        GetProductUseCase.GetProductOutput output = getProductUseCase.execute(
+                GetProductUseCase.GetProductInput.create("missing-product"));
+
+        assertEquals(ExitCode.FAILURE, output.getExitCode());
+    }
+
+    @Test
+    void should_return_failure_when_renaming_missing_product() {
+        CqrsOutput<?> output = renameProductUseCase.execute(
+                RenameProductUseCase.RenameProductInput.create(
+                        "missing-product",
+                        "AI Scrum Coach",
+                        "user-456"));
+
+        assertEquals(ExitCode.FAILURE, output.getExitCode());
     }
 }

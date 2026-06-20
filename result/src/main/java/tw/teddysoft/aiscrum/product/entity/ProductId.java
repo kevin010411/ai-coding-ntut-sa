@@ -11,16 +11,16 @@ public record ProductId(String value) implements ValueObject {
         Objects.requireNonNull(value, "ProductId value cannot be null");
     }
 
+    public static ProductId create() {
+        return new ProductId(UUID.randomUUID().toString());
+    }
+
     public static ProductId valueOf(String value) {
         return new ProductId(value);
     }
 
-    public static ProductId valueOf(UUID uuid) {
-        return new ProductId(uuid.toString());
-    }
-
-    public static ProductId create() {
-        return valueOf(UUID.randomUUID());
+    public static ProductId valueOf(UUID value) {
+        return new ProductId(value.toString());
     }
 
     @Override

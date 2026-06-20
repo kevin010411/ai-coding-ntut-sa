@@ -10,8 +10,6 @@ import java.util.UUID;
 
 public sealed interface ProductEvents extends InternalDomainEvent {
 
-    String MAPPING_TYPE_PREFIX = "tw.teddysoft.aiscrum.product.";
-
     ProductId productId();
 
     @Override
@@ -19,9 +17,12 @@ public sealed interface ProductEvents extends InternalDomainEvent {
         return productId().value();
     }
 
+    String MAPPING_TYPE_PREFIX = "ProductEvents$";
+
     static DomainEventTypeMapper mapper() {
         DomainEventTypeMapper mapper = DomainEventTypeMapper.create();
         mapper.put(MAPPING_TYPE_PREFIX + "ProductCreated", ProductCreated.class);
+        mapper.put(MAPPING_TYPE_PREFIX + "ProductRenamed", ProductRenamed.class);
         return mapper;
     }
 
@@ -38,12 +39,41 @@ public sealed interface ProductEvents extends InternalDomainEvent {
     ) implements ProductEvents, InternalDomainEvent.ConstructionEvent {
 
         public ProductCreated {
-            Objects.requireNonNull(productId, "productId cannot be null");
-            Objects.requireNonNull(name, "name cannot be null");
-            Objects.requireNonNull(state, "state cannot be null");
-            Objects.requireNonNull(metadata, "metadata cannot be null");
-            Objects.requireNonNull(id, "id cannot be null");
-            Objects.requireNonNull(occurredOn, "occurredOn cannot be null");
+            Objects.requireNonNull(productId);
+            Objects.requireNonNull(name);
+            Objects.requireNonNull(state);
+            Objects.requireNonNull(metadata);
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(occurredOn);
+        }
+
+        @Override
+        public Map<String, String> metadata() {
+            return metadata;
+        }
+    }
+
+    record ProductRenamed(
+            ProductId productId,
+            ProductName oldName,
+            ProductName newName,
+            Map<String, String> metadata,
+            UUID id,
+            Instant occurredOn
+    ) implements ProductEvents {
+
+        public ProductRenamed {
+            Objects.requireNonNull(productId);
+            Objects.requireNonNull(oldName);
+            Objects.requireNonNull(newName);
+            Objects.requireNonNull(metadata);
+            Objects.requireNonNull(id);
+            Objects.requireNonNull(occurredOn);
+        }
+
+        @Override
+        public Map<String, String> metadata() {
+            return metadata;
         }
     }
 }

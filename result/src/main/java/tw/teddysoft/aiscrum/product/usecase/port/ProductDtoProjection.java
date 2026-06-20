@@ -1,8 +1,0 @@
-package tw.teddysoft.aiscrum.product.usecase.port;
-
-import tw.teddysoft.ezddd.cqrs.usecase.query.Projection;
-
-import java.util.Optional;
-
-public interface ProductDtoProjection extends Projection<ProductDtoProjectionInput, Optional<ProductDto>> {
-}

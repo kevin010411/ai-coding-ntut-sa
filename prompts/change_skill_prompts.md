@@ -52,3 +52,7 @@ Create a wrapper around the Entity:
 
 3. 請把整個skill中使用dto的地方都改成readonly entity
 4. 幫我修改AI Coding Exercise Skills UC，在使用readonly時需要確保沒有違反CA的跨層原則，如果違反，需要使用DtO彌補outport
+5. 請幫我修改skill，符合以下描述:
+1.在usecase layer層完全去除DtO，使用readonly entity解決
+2.readonly中的proxy方法interface為原物件名，真實物件為Real*，readonly為readonly*。
+3.在考慮哪些domain model需要變成readonly之前請先檢查是否需要有readonly，因為readonly本身的目的是保護aggregate裡面的其他domain
