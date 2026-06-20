@@ -1,20 +1,26 @@
 package tw.teddysoft.aiscrum.common.entity;
 
 import java.time.Instant;
+import java.util.Objects;
+import java.util.function.Supplier;
 
-public class DateProvider {
+public final class DateProvider {
 
-    private static Instant fixedInstant;
+    private static Supplier<Instant> clock = Instant::now;
 
-    public static Instant now() {
-        return fixedInstant != null ? fixedInstant : Instant.now();
+    private DateProvider() {
     }
 
-    public static void useFixedInstant(Instant instant) {
-        fixedInstant = instant;
+    public static Instant now() {
+        return clock.get();
+    }
+
+    public static void useFixedTime(Instant fixedTime) {
+        Objects.requireNonNull(fixedTime, "fixedTime cannot be null");
+        clock = () -> fixedTime;
     }
 
     public static void useSystemTime() {
-        fixedInstant = null;
+        clock = Instant::now;
     }
 }

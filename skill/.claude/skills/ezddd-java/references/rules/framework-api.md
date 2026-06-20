@@ -53,7 +53,7 @@ import tw.teddysoft.ezddd.cqrs.usecase.query.Projection;
 import tw.teddysoft.ezddd.cqrs.usecase.query.Projection.ProjectionInput;
 
 public abstract class ProductProjection
-        extends Projection<ProductProjection.ProductProjectionInput, Optional<ProductReadOnly>> {
+        extends Projection<ProductProjection.ProductProjectionInput, Optional<readonlyProduct>> {
 
     public static class ProductProjectionInput implements ProjectionInput {
         public final String productId;

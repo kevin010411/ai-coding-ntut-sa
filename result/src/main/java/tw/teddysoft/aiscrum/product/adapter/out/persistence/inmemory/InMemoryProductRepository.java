@@ -13,12 +13,17 @@ public class InMemoryProductRepository implements ProductRepository {
     private final Map<ProductId, Product> products = new ConcurrentHashMap<>();
 
     @Override
+    public Optional<Product> findById(ProductId id) {
+        return Optional.ofNullable(products.get(id));
+    }
+
+    @Override
     public void save(Product product) {
         products.put(product.getId(), product);
     }
 
     @Override
-    public Optional<Product> findById(ProductId id) {
-        return Optional.ofNullable(products.get(id));
+    public void delete(Product product) {
+        products.remove(product.getId());
     }
 }

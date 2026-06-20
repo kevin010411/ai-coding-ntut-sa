@@ -1,6 +1,6 @@
 {
   "query": "GetTasksByProductBacklogItem",
-  "behavior": "依據 ProductBacklogItemId 回傳該 PBI 下的 immutable List<TaskReadOnly>，不可回傳 TaskDto 或可變 Task entity collection",
+  "behavior": "依據 ProductBacklogItemId 回傳該 PBI 下的 immutable List<readonlyTask>，不可回傳 TaskDto 或可變 Task entity collection",
   "input": [
     {
       "name": "pbiId",
@@ -95,9 +95,9 @@
       "given": "PBI 已建立並包含多個 Tasks（有些已估算，有些未估算）",
       "when": "呼叫 GetTasksByPbiUseCase 查詢該 PBI 的所有 Tasks",
       "then": [
-        "應該成功回傳 List<TaskReadOnly>",
-        "List 應包含 3 個 TaskReadOnly",
-        "每個 TaskReadOnly 應包含正確的基本資料（id, pbiId, name, state）",
+        "應該成功回傳 List<readonlyTask>",
+        "List 應包含 3 個 readonlyTask",
+        "每個 readonlyTask 應包含正確的基本資料（id, pbiId, name, state）",
         "task-001 應有 estimatedHours 和 remainingHours（值為 5）",
         "task-002 應有 estimatedHours 和 remainingHours（值為 8）",
         "task-003 應有 estimatedHours 和 remainingHours（值為 4）",
@@ -111,7 +111,7 @@
       "given": "PBI 已建立但沒有任何 Tasks",
       "when": "呼叫 GetTasksByPbiUseCase 查詢該 PBI 的所有 Tasks",
       "then": [
-        "應該成功回傳空的 List<TaskReadOnly>",
+        "應該成功回傳空的 List<readonlyTask>",
         "ExitCode 應為 SUCCESS"
       ]
     },
@@ -120,7 +120,7 @@
       "given": "不存在指定的 PBI",
       "when": "查詢不存在的 pbiId",
       "then": [
-        "應該回傳空的 List<TaskReadOnly>",
+        "應該回傳空的 List<readonlyTask>",
         "ExitCode 應為 SUCCESS",
         "應該包含訊息說明 PBI 不存在或沒有 Tasks"
       ]
@@ -128,7 +128,7 @@
   ],
   "readOnlyEntities": [
     {
-      "name": "TaskReadOnly",
+      "name": "readonlyTask",
       "source": "Task",
       "implementationApproach": "inheritance-or-composition",
       "description": "Task 的 read-only entity view，保留查詢操作並阻擋狀態變更。",

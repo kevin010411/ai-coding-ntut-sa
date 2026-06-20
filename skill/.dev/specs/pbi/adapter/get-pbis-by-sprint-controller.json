@@ -16,13 +16,13 @@
           },
           "output": {
             "type": "list",
-            "entity": "ProductBacklogItemReadOnly",
+            "entity": "readonlyProductBacklogItem",
             "itemType": "readOnlyEntity"
           }
         },
         "responses": {
           "200": {
-            "body": "List<ProductBacklogItemReadOnly>"
+            "body": "List<readonlyProductBacklogItem>"
           },
           "400": {
             "body": "ApiError"
@@ -84,8 +84,8 @@
       "when": "GET /v1/api/sprints/{sprintId}/pbis",
       "then": [
         "Returns HTTP 200",
-        "Response body contains List<ProductBacklogItemReadOnly>",
-        "Each ProductBacklogItemReadOnly contains all required fields",
+        "Response body contains List<readonlyProductBacklogItem>",
+        "Each readonlyProductBacklogItem contains all required fields",
         "PBIs are sorted by orderId",
         "Content-Type is application/json"
       ]
@@ -166,7 +166,7 @@
           "validation": "@NotBlank"
         }
       ],
-      "returnType": "ResponseEntity<List<ProductBacklogItemReadOnly>>"
+      "returnType": "ResponseEntity<List<readonlyProductBacklogItem>>"
     }
   },
   "notes": [

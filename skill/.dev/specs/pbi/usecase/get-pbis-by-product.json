@@ -1,6 +1,6 @@
 {
   "query": "GetProductBacklogItemsByProduct",
-  "behavior": "依據 ProductId 回傳該 Product 的 immutable List<ProductBacklogItemReadOnly>，不可回傳 ProductBacklogItemDto 或可變 ProductBacklogItem entity collection",
+  "behavior": "依據 ProductId 回傳該 Product 的 immutable List<readonlyProductBacklogItem>，不可回傳 ProductBacklogItemDto 或可變 ProductBacklogItem entity collection",
   "input": [
     {
       "name": "productId",
@@ -9,7 +9,7 @@
     }
   ],
   "method": "productBacklogItemRepository.findByProductId",
-  "output": "GetProductBacklogItemsByProductOutput<List<ProductBacklogItemReadOnly>>",
+  "output": "GetProductBacklogItemsByProductOutput<List<readonlyProductBacklogItem>>",
   "domainModelNotes": [
     "此為 Query Use Case，不修改任何 domain state",
     "回傳指定 Product 的所有 PBI，包含已選入 Sprint 和未選入的",
@@ -128,13 +128,13 @@
       "given": "一個 Product 已建立且包含多個 PBI（有些已估算，有些未估算，有些有 Tasks）",
       "when": "呼叫 GetProductBacklogItemsByProductUseCase 查詢該 Product 的所有 PBI",
       "then": [
-        "應該成功回傳 List<ProductBacklogItemReadOnly>",
+        "應該成功回傳 List<readonlyProductBacklogItem>",
         "列表應包含該 Product 的所有 3 個 PBI",
         "PBI 應按照 orderId 排序（1, 2, 3）",
         "已估算的 PBI 應包含正確的 EstimateReadOnly",
         "未估算的 PBI 的 estimate 欄位應為 null",
-        "有 Tasks 的 PBI 應包含完整的 TaskReadOnly 列表",
-        "每個 ProductBacklogItemReadOnly 應包含正確的基本資料（id, title, description, priority）"
+        "有 Tasks 的 PBI 應包含完整的 readonlyTask 列表",
+        "每個 readonlyProductBacklogItem 應包含正確的基本資料（id, title, description, priority）"
       ]
     },
     {
@@ -142,7 +142,7 @@
       "given": "一個 Product 已建立但沒有任何 PBI",
       "when": "查詢該 Product 的所有 PBI",
       "then": [
-        "應該成功回傳空列表 List<ProductBacklogItemReadOnly>",
+        "應該成功回傳空列表 List<readonlyProductBacklogItem>",
         "不應該回傳 null 或錯誤"
       ]
     },
@@ -168,7 +168,7 @@
   ],
   "readOnlyEntities": [
     {
-      "name": "ProductBacklogItemReadOnly",
+      "name": "readonlyProductBacklogItem",
       "source": "ProductBacklogItem",
       "implementationApproach": "inheritance-or-composition",
       "description": "ProductBacklogItem 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
@@ -183,7 +183,7 @@
         "getOrderId() -> Integer",
         "getStatus() -> String",
         "getSprintId() -> String",
-        "getTasks() -> List<TaskReadOnly>",
+        "getTasks() -> List<readonlyTask>",
         "getCreatedAt() -> Instant",
         "getUpdatedAt() -> Instant"
       ],
@@ -229,7 +229,7 @@
       ]
     },
     {
-      "name": "TaskReadOnly",
+      "name": "readonlyTask",
       "source": "Task",
       "implementationApproach": "inheritance-or-composition",
       "description": "Task 的 read-only entity view，保留查詢操作並阻擋狀態變更。",

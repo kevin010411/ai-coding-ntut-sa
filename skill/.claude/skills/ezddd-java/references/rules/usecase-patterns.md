@@ -184,8 +184,7 @@ public class CommitSprintWhenSprintCreatedService implements WhenSprintCreatedCo
 | Inquiry Interface (Reactor) | `{aggregate}/usecase/port/out/inquiry/` |
 | JPA Projection (Query) | `{aggregate}/adapter/out/database/springboot/projection/` |
 | JPA Inquiry (Reactor) | `{aggregate}/adapter/out/persistence/inquiry/` |
-| ReadOnlyEntity (Query) | `{aggregate}/usecase/port/` only when it does not violate CA dependency direction |
-| DTO fallback for Query outport | `{aggregate}/usecase/port/` or `{aggregate}/usecase/port/readmodel/` |
+| ReadOnlyEntity (Query) | `{aggregate}/entity/readonly{Name}.java` when mutable aggregate internals need protection |
 | Config | `{aggregate}/io/springboot/config/` |
 
 ```java
@@ -202,10 +201,11 @@ public class CreateProductService { }  // Should be in service/
 
 ### Query Outport Read Model Boundary
 
-For query use cases, the outport contract is part of the application boundary. It may return a read-only entity only when that type does not force dependencies from inner layers to outer layers and does not expose mutable domain state.
+UseCase layer query outputs must not use DTOs. Query usecases return `CqrsOutput<T>` wrappers containing read-only entities when mutable aggregate/internal domain state needs protection.
 
-If a read-only proxy/inheritance implementation would require domain classes to depend on usecase/adapter/read-model details, or would make the outport expose persistence/adapter types, use a DTO/read-model record in `usecase.port` as the outport return type. Adapter implementations map infrastructure data into that DTO, and the usecase service maps again only when a CA-safe read-only response model is available.
+Before creating read-only types, check whether read-only is needed. Read-only is only required to protect mutable aggregate internals: aggregate roots, child entities, nested mutable entities, or collections of those objects. Safe immutable values do not need extra read-only wrappers.
 
+Proxy naming is mandatory: the original object name is the query-only interface, the mutable implementation is `Real*`, and the read-only proxy is `readonly*`.
 ---
 
 ## Spring Configuration Pattern

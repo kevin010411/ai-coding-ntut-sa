@@ -181,57 +181,52 @@ public class Plan extends EsAggregateRoot<PlanId, PlanEvents> {
 
 ### Category 4: Read-only Entity
 
-**Use for:** Query outputs that expose aggregate/entity state without allowing external clients to mutate aggregate internals.
+**Use for:** Query outputs that would otherwise expose mutable aggregate internals. Read-only entities exist to protect the aggregate's internal domain objects, especially child entities and nested collections.
 
-Read-only entities must use one of these two approaches:
+Before generating any read-only type, perform the Read-only Necessity Check:
 
-#### Proxy / Composition
+1. Inspect whether the query output exposes a mutable aggregate root, child entity, nested mutable entity, or collection/map containing mutable entities.
+2. If the output contains only primitives, strings, enums, IDs, immutable value objects, timestamps, or immutable collections of those safe values, do not generate extra read-only wrappers.
+3. If mutable aggregate/internal domain objects would be exposed, generate read-only wrappers only for those boundary objects and nested mutable children.
+4. Never use a DTO to replace a read-only entity in the usecase layer.
 
-- Define a shared interface for the domain model class and read-only entity, containing only query operations.
-- Make the original domain model class implement that interface.
-- Make the read-only proxy implement the same interface and wrap the original domain model object internally.
-- Delegate query methods to the wrapped object.
-- Reject or omit mutation methods; never expose the wrapped mutable object.
+Read-only entities must use the proxy/composition approach with this naming rule:
+
+- Original object name = shared interface, query methods only: `Task`, `Product`, `ProductGoal`.
+- Real mutable implementation = `Real*`: `RealTask`, `RealProduct`, `RealProductGoal`.
+- Read-only proxy = `readonly*`: `readonlyTask`, `readonlyProduct`, `readonlyProductGoal`.
 
 ```java
-public interface TaskView {
+public interface Task {
     TaskId getId();
     String getName();
     TaskState getState();
 }
 
-public class Task implements TaskView {
-    // Domain command methods remain on Task.
+public final class RealTask implements Task {
+    // Domain command methods remain here or package-private behind aggregate methods.
 }
 
-public final class TaskReadOnly implements TaskView {
-    private final Task task;
+public final class readonlyTask implements Task {
+    private final Task source;
 
-    public TaskReadOnly(Task task) {
-        this.task = Objects.requireNonNull(task, "Task cannot be null");
+    public readonlyTask(Task source) {
+        this.source = Objects.requireNonNull(source, "Task cannot be null");
     }
 
-    public TaskId getId() { return task.getId(); }
-    public String getName() { return task.getName(); }
-    public TaskState getState() { return task.getState(); }
+    public TaskId getId() { return source.getId(); }
+    public String getName() { return source.getName(); }
+    public TaskState getState() { return source.getState(); }
 }
 ```
 
-#### Inheritance
-
-- Make the read-only entity extend the original domain model class.
-- Override every state-changing command method to throw `UnsupportedOperationException` or an equivalent domain protection exception.
-- Override query methods returning entities or collections so nested values are read-only and collections are immutable.
-
-```java
-public class TaskReadOnly extends Task {
-    @Override
-    public void rename(String newName) {
-        throw new UnsupportedOperationException("TaskReadOnly cannot be mutated");
-    }
-}
-```
-
+Rules for `readonly*`:
+- implement the original-name interface;
+- expose only query/read methods;
+- never expose the wrapped `Real*` or mutable source;
+- wrap nested mutable child entities as `readonly*`;
+- return immutable collections for nested collections;
+- do not use inheritance for read-only protection.
 ---
 
 ## CRITICAL RULES (Embedded - Cannot Be Skipped)

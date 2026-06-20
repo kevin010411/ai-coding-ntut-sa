@@ -51,14 +51,14 @@ public class CreateProductController {
 #### GET Mapping
 ```java
 @GetMapping
-public ResponseEntity<List<ProductReadOnly>> getProducts() {
+public ResponseEntity<List<readonlyProduct>> getProducts() {
 ```
 - **HTTP method**: GET
 - **Path**: (base path only) `/v1/api/products`
 
 ```java
 @GetMapping("/{id}")
-public ResponseEntity<ProductReadOnly> getProduct(@PathVariable String id) {
+public ResponseEntity<readonlyProduct> getProduct(@PathVariable String id) {
 ```
 - **HTTP method**: GET
 - **Path**: `/v1/api/products/{id}`
@@ -86,7 +86,7 @@ public ResponseEntity<AcceptedResponse> createSprint(
 #### PUT Mapping
 ```java
 @PutMapping("/{id}")
-public ResponseEntity<ProductReadOnly> updateProduct(
+public ResponseEntity<readonlyProduct> updateProduct(
     @PathVariable String id,
     @Valid @RequestBody UpdateProductRequest request) {
 ```
@@ -124,7 +124,7 @@ public ResponseEntity<SprintReadOnly> getSprint(
 Pattern: `@RequestParam [Type] [name]`
 ```java
 @GetMapping
-public ResponseEntity<List<ProductBacklogItemReadOnly>> getPbis(
+public ResponseEntity<List<readonlyProductBacklogItem>> getPbis(
     @RequestParam(required = false) String sprintId,
     @RequestParam(defaultValue = "10") int limit) {
 ```
@@ -191,8 +191,8 @@ public ResponseEntity<AcceptedResponse> delete(
 Common response patterns:
 ```java
 // Query - returns data
-ResponseEntity<ProductReadOnly>
-ResponseEntity<List<ProductReadOnly>>
+ResponseEntity<readonlyProduct>
+ResponseEntity<List<readonlyProduct>>
 
 // Command - returns accepted response
 ResponseEntity<AcceptedResponse>
@@ -258,11 +258,11 @@ Each controller typically handles one endpoint (one use case per controller).
 
 ```java
 // ✅ CORRECT — 使用 aggregateId
-public class ProductReadOnly { public String getProductId() { ... } }
+public class readonlyProduct { public String getProductId() { ... } }
 public class SprintReadOnly { public String getSprintId() { ... } }
 
 // ❌ WRONG — 泛用 id 會導致前端 undefined
-public class ProductReadOnly { public String getId() { ... } }
+public class readonlyProduct { public String getId() { ... } }
 ```
 
 **原因**：
@@ -271,7 +271,7 @@ public class ProductReadOnly { public String getId() { ... } }
 - 使用泛用 `id` 會導致前後端欄位名不一致，造成 `undefined` 錯誤
 - DDD 語意：`productId` 比 `id` 更明確表達 aggregate identity
 
-**適用範圍**：所有 query response 的 `*ReadOnly` 類別。
+**適用範圍**：所有 query response 的 `readonly*` 類別。
 
 ## Caveats
 

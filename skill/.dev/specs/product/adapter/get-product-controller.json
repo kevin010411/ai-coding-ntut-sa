@@ -14,11 +14,11 @@
           },
           "output": {
             "type": "readOnlyEntity",
-            "entity": "ProductReadOnly"
+            "entity": "readonlyProduct"
           }
         },
         "responses": {
-          "200": { "body": "ProductReadOnly" },
+          "200": { "body": "readonlyProduct" },
           "400": { "body": "ApiError" },
           "404": { "body": "ApiError" },
           "401": { "body": "ApiError" }
@@ -42,8 +42,8 @@
     "domainExposure": {
       "pattern": "read-only-entity",
       "rules": [
-        "Controller may serialize ProductReadOnly returned by GetProductUseCase.",
-        "Controller must not map ProductReadOnly back to ProductDto.",
+        "Controller may serialize readonlyProduct returned by GetProductUseCase.",
+        "Controller must not map readonlyProduct back to ProductDto.",
         "Controller must not expose mutable Product entity."
       ]
     },

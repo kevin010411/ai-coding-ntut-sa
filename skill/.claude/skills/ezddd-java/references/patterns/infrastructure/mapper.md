@@ -315,27 +315,20 @@ public static Product toDomain(ProductData data) {
 
 ### Rule 6: toReadOnly() Methods (Optional)
 
-Query outputs should use read-only entities, not DTO records. If a mapper helper is needed for read-side conversion, name it `toReadOnly(...)` and return `*ReadOnly`.
+Query outputs should use read-only entities, not DTO records. If a mapper helper is needed for read-side conversion, name it `toReadOnly(...)` and return `readonly*` proxies.
 
 ```java
-// ✅ CORRECT: Separate toReadOnly methods for different sources
-public static ProductReadOnly toReadOnly(Product product) {
-    return ProductReadOnly.from(
-        product.getId().toString(),
-        product.getName().toString(),
-        product.isDeleted()
-    );
+// ✅ CORRECT: wrap a domain object with a read-only proxy
+public static readonlyProduct toReadOnly(Product product) {
+    return new readonlyProduct(product);
 }
 
-public static ProductReadOnly toReadOnly(ProductData data) {
-    return ProductReadOnly.from(
-        data.getId(),
-        data.getName(),
-        data.isDeleted()
-    );
+// ✅ CORRECT: infrastructure data is converted to domain first, then wrapped
+public static readonlyProduct toReadOnly(ProductData data) {
+    return new readonlyProduct(toDomain(data));
 }
 
-public static List<ProductReadOnly> toReadOnly(List<ProductData> dataList) {
+public static List<readonlyProduct> toReadOnly(List<ProductData> dataList) {
     return dataList.stream()
         .map(ProductMapper::toReadOnly)
         .toList();

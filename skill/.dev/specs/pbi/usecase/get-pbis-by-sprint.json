@@ -1,6 +1,6 @@
 {
   "query": "GetBacklogItemsBySprint",
-  "behavior": "依據 SprintId 回傳該 Sprint 內的 immutable List<ProductBacklogItemReadOnly>，不可回傳 ProductBacklogItemDto 或可變 ProductBacklogItem entity collection",
+  "behavior": "依據 SprintId 回傳該 Sprint 內的 immutable List<readonlyProductBacklogItem>，不可回傳 ProductBacklogItemDto 或可變 ProductBacklogItem entity collection",
   "input": [
     {
       "name": "sprintId",
@@ -9,7 +9,7 @@
     }
   ],
   "method": "productBacklogItemRepository.findBySprintId",
-  "output": "GetBacklogItemsBySprintOutput<List<ProductBacklogItemReadOnly>>",
+  "output": "GetBacklogItemsBySprintOutput<List<readonlyProductBacklogItem>>",
   "domainModelNotes": [
     "查詢特定 Sprint 內的所有 PBIs",
     "如果 Sprint 不存在或沒有 PBIs，回傳空列表",
@@ -113,7 +113,7 @@
       "given": "Sprint 內有多個 Product Backlog Items",
       "when": "呼叫 GetBacklogItemsBySprintUseCase 查詢該 Sprint",
       "then": [
-        "應該成功回傳 List<ProductBacklogItemReadOnly>",
+        "應該成功回傳 List<readonlyProductBacklogItem>",
         "列表應包含該 Sprint 內的所有 PBIs",
         "每個 PBI 應包含正確的基本資料（id, name, sprintId）",
         "PBIs 應按照 orderId 排序",
@@ -142,7 +142,7 @@
   ],
   "readOnlyEntities": [
     {
-      "name": "ProductBacklogItemReadOnly",
+      "name": "readonlyProductBacklogItem",
       "source": "ProductBacklogItem",
       "implementationApproach": "inheritance-or-composition",
       "description": "ProductBacklogItem 的 read-only entity view，保留查詢操作並阻擋狀態變更。",
@@ -156,7 +156,7 @@
         "getImportance() -> String",
         "getState() -> String",
         "getOrderId() -> Integer",
-        "getTasks() -> List<TaskReadOnly>",
+        "getTasks() -> List<readonlyTask>",
         "getNote() -> String",
         "getCreatorId() -> String",
         "getCreatedAt() -> Instant",

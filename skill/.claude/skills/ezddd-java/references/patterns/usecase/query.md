@@ -12,57 +12,62 @@ Queries are **read-only** operations that never modify system state.
 
 ### Read-only Entity Rule
 
-Generate query results around read-only entities when they preserve Clean Architecture boundaries; otherwise use DTO fallback at the outport boundary.
+UseCase layer query outputs must use read-only entities, not DTOs.
 
-- Return `ProductReadOnly`, `List<ProductReadOnly>`, or the spec-declared read-only entity type from the custom `CqrsOutput<T>` subclass.
-- Load read-side state through a CA-safe projection/outport, then convert it to a read-only response or DTO fallback before setting output.
-- Do not generate DTO records, DTO projections, or `toDto(...)` mapper methods for query results unless the Clean Architecture boundary rule requires DTO fallback for the outport.
+- Do not generate DTO records, DTO projections, `toDto(...)` mapper methods, or DTO fallback types in the usecase layer.
+- Return `readonlyProduct`, `List<readonlyProduct>`, or the spec-declared read-only entity type from the custom `CqrsOutput<T>` subclass.
+- Load read-side state through a projection/outport, then convert it to a read-only entity before setting output.
 - Do not expose the original mutable aggregate or child entity. A mutable entity leak is still forbidden.
-- Convert nested returned entities into read-only entities.
 - Return immutable collections for entity lists and nested entity collections.
 
-### Clean Architecture Boundary Rule for Read-only Outputs
+### Read-only Necessity Check (Before Choosing Domain Models)
 
-Read-only output is allowed only when it preserves Clean Architecture dependency direction. Before generating a read-only entity, evaluate the boundary it crosses:
+Before deciding which domain models need read-only wrappers, first decide whether read-only is needed at all.
 
-- A usecase outport (`port/out/projection`, `port/out/inquiry`, repository-like port) must not expose adapter/infrastructure types, JPA persistent objects, Spring Data projections, or domain entities whose implementation would force an outer layer concern into the domain/application layer.
-- A `*ReadOnly` type must not require the mutable domain model to depend on usecase, adapter, projection, DTO, or persistence packages. Shared interfaces for proxy-style read-only views are valid only when the interface belongs to the domain model boundary and contains domain-safe query operations.
-- Inheritance-style read-only entities are valid only when extending the domain model does not introduce usecase/adapter dependencies or leak mutable state/commands across the port boundary.
-- If a read-only approach would violate these CA layer rules, do not force read-only through the outport. Use a DTO/read-model record at the outport boundary to compensate, then map inside the application layer to the safest response model.
-- The fallback DTO belongs in the usecase/application boundary (for example `{aggregate}/usecase/port/` or a dedicated DTO/readmodel package under `usecase/port`), not in adapter/infrastructure. Adapter implementations may map persistence data to that DTO before returning through the outport.
-- When DTO fallback is selected, the Query `CqrsOutput<T>` wraps the DTO or immutable list of DTOs. Do not call it a read-only entity, and do not generate read-only proxy/inheritance code for that query.
+Read-only exists to protect aggregate internals, especially child domain entities and collections reachable through an aggregate. Generate a read-only wrapper only when the query result would otherwise expose:
+
+- a mutable aggregate root;
+- a mutable child entity inside an aggregate;
+- a collection, map, or nested object graph containing mutable domain entities;
+- a domain object with public or package-visible mutation methods that could be reached by clients of the query result.
+
+Do not generate extra read-only wrappers for simple values that are already safe to expose, such as primitives, strings, enums, immutable value objects, IDs, timestamps, or immutable collections of those safe values.
 
 Decision order:
-1. Prefer spec-declared read-only entities only if the domain/application dependency direction remains clean.
-2. If read-only would make an outport depend on the wrong layer or pull outer-layer details inward, use DTO fallback for the outport.
-3. Never expose mutable aggregate/entity instances as a shortcut.
+1. Inspect the query output object graph and identify whether it contains mutable aggregate/internal domain objects.
+2. If there is no mutable aggregate/internal domain object to protect, do not invent additional read-only domain models.
+3. If there is mutable aggregate/internal state to protect, wrap only the necessary boundary objects and nested mutable children with read-only entities.
+4. Never use DTOs to solve usecase-layer query output concerns.
 
-### Read-only Entity Implementation Approaches
+### Proxy Naming Rule
 
-Every read-only entity must use one of these two implementation approaches:
+When using proxy/composition for read-only entities, use these names exactly:
 
-1. **Proxy / composition approach**
-   - The read-only entity wraps the original domain model object.
-   - The read-only entity and the original domain model class must share a common interface that declares the allowed query operations.
-   - The proxy implements that shared interface, delegates query operations to the wrapped domain model object, and rejects or omits state-changing command operations.
-   - Never expose the wrapped mutable domain model object through a getter.
+- The shared interface keeps the original domain object name: `Product`, `Task`, `ProductGoal`.
+- The real mutable implementation is named `Real*`: `RealProduct`, `RealTask`, `RealProductGoal`.
+- The read-only proxy is named `readonly*`: `readonlyProduct`, `readonlyTask`, `readonlyProductGoal`.
 
-2. **Inheritance approach**
-   - The read-only entity class must extend the original domain model class.
-   - Override every state-changing command method to throw `UnsupportedOperationException` or an equivalent domain protection exception.
-   - Override query methods that return entities or entity collections so they return read-only entities and immutable collections.
+The interface contains only query/read operations. Command/mutation operations belong on the `Real*` implementation or remain package-private behind aggregate methods; they must not be available through the original-name interface.
 
+### Read-only Entity Implementation Approach
+
+Use the proxy/composition approach for read-only entities:
+
+1. Define the original-name interface with query/read methods only.
+2. Implement mutable behavior in `Real*`.
+3. Implement read-only protection in `readonly*`.
+4. `readonly*` wraps the original-name interface or `Real*`, delegates query methods, wraps nested mutable children as `readonly*`, returns immutable collections, and never exposes the wrapped mutable object.
 ```java
 class GetProductOutput extends CqrsOutput<GetProductOutput> {
-    private ProductReadOnly product;
-    public ProductReadOnly getProduct() { return product; }
-    public GetProductOutput setProduct(ProductReadOnly product) { this.product = product; return this; }
+    private readonlyProduct product;
+    public readonlyProduct getProduct() { return product; }
+    public GetProductOutput setProduct(readonlyProduct product) { this.product = product; return this; }
 }
 
 class GetProductsOutput extends CqrsOutput<GetProductsOutput> {
-    private List<ProductReadOnly> products = List.of();
-    public List<ProductReadOnly> getProducts() { return products; }
-    public GetProductsOutput setProducts(List<ProductReadOnly> products) {
+    private List<readonlyProduct> products = List.of();
+    public List<readonlyProduct> getProducts() { return products; }
+    public GetProductsOutput setProducts(List<readonlyProduct> products) {
         this.products = List.copyOf(products);
         return this;
     }
@@ -86,8 +91,7 @@ class GetProductsOutput extends CqrsOutput<GetProductsOutput> {
 |------|----------|
 | UseCase Interface | `src/main/java/{rootPackage}/{aggregate}/usecase/port/in/{UseCase}UseCase.java` |
 | Service Implementation | `src/main/java/{rootPackage}/{aggregate}/usecase/service/{UseCase}Service.java` |
-| Read-only Entity | `src/main/java/{rootPackage}/{aggregate}/entity/{Name}ReadOnly.java` |
-| DTO fallback for CA-safe outport | `src/main/java/{rootPackage}/{aggregate}/usecase/port/{Name}Dto.java` or `{Name}ReadModel.java` |
+| Read-only Entity | `src/main/java/{rootPackage}/{aggregate}/entity/readonly{Name}.java` |
 
 ---
 
@@ -106,9 +110,9 @@ public interface GetProductUseCase extends Query<GetProductUseCase.GetProductInp
     }
 
     class GetProductOutput extends CqrsOutput<GetProductOutput> {
-        private ProductReadOnly product;
-        public ProductReadOnly getProduct() { return product; }
-        public GetProductOutput setProduct(ProductReadOnly product) { this.product = product; return this; }
+        private readonlyProduct product;
+        public readonlyProduct getProduct() { return product; }
+        public GetProductOutput setProduct(readonlyProduct product) { this.product = product; return this; }
     }
 }
 
@@ -123,7 +127,7 @@ public class GetProductService implements GetProductUseCase {
 
         Product product = productRepository.findById(ProductId.of(input.productId))
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
-        ProductReadOnly productReadOnly = ProductReadOnly.from(product);
+        readonlyProduct productReadOnly = new readonlyProduct(product);
         return new GetProductOutput()
                 .setProduct(productReadOnly)
                 .setId(input.productId)
@@ -146,10 +150,10 @@ public interface GetProductsUseCase extends Query<GetProductsUseCase.GetProducts
     }
 
     class GetProductsOutput extends CqrsOutput<GetProductsOutput> {
-        private List<ProductReadOnly> products = List.of();
-        public List<ProductReadOnly> getProducts() { return products; }
+        private List<readonlyProduct> products = List.of();
+        public List<readonlyProduct> getProducts() { return products; }
         public static GetProductsOutput create() { return new GetProductsOutput(); }
-        public GetProductsOutput setProducts(List<ProductReadOnly> products) {
+        public GetProductsOutput setProducts(List<readonlyProduct> products) {
             this.products = List.copyOf(products);
             return this;
         }
@@ -162,8 +166,8 @@ public class GetProductsService implements GetProductsUseCase {
 
     @Override
     public GetProductsOutput execute(GetProductsInput input) {
-        List<ProductReadOnly> products = productRepository.findAll().stream()
-                .map(ProductReadOnly::from)
+        List<readonlyProduct> products = productRepository.findAll().stream()
+                .map(readonlyProduct::new)
                 .toList();
 
         return GetProductsOutput.create()
@@ -187,9 +191,9 @@ public interface GetTasksByDateUseCase extends Query<GetTasksByDateUseCase.GetTa
     }
 
     class GetTasksByDateOutput extends CqrsOutput<GetTasksByDateOutput> {
-        private List<TaskReadOnly> tasks;
-        public List<TaskReadOnly> getTasks() { return tasks; }
-        public GetTasksByDateOutput setTasks(List<TaskReadOnly> tasks) { this.tasks = tasks; return this; }
+        private List<readonlyTask> tasks;
+        public List<readonlyTask> getTasks() { return tasks; }
+        public GetTasksByDateOutput setTasks(List<readonlyTask> tasks) { this.tasks = tasks; return this; }
     }
 }
 
@@ -206,7 +210,7 @@ public class GetTasksByDateService implements GetTasksByDateUseCase {
         projectionInput.userId = input.userId;
         projectionInput.date = input.date;
 
-        List<TaskReadOnly> tasks = projection.query(projectionInput);
+        List<readonlyTask> tasks = projection.query(projectionInput);
         return new GetTasksByDateOutput()
                 .setTasks(tasks)
                 .succeed();
@@ -229,21 +233,21 @@ public interface GetProductUseCase extends Query<GetProductUseCase.GetProductInp
     }
 
     class GetProductOutput extends CqrsOutput<GetProductOutput> {  // CRTP!
-        private ProductReadOnly product;
-        public ProductReadOnly getProductReadOnly() { return product; }
-        public GetProductOutput setProductReadOnly(ProductReadOnly dto) { this.product = dto; return this; }
+        private readonlyProduct product;
+        public readonlyProduct getProduct() { return product; }
+        public GetProductOutput setProduct(readonlyProduct product) { this.product = product; return this; }
     }
 }
 
 // ✅ CORRECT: List query — also uses CqrsOutput CRTP
 public interface GetProductsUseCase extends Query<GetProductsUseCase.GetProductsInput, GetProductsUseCase.GetProductsOutput> {
     class GetProductsOutput extends CqrsOutput<GetProductsOutput> {  // CRTP!
-        public List<ProductReadOnly> products;
+        public List<readonlyProduct> products;
     }
 }
 
-// ❌ WRONG: Bare DTO without CqrsOutput wrapper
-public interface GetProductUseCase extends Query<GetProductInput, ProductReadOnly> { }  // Compilation error!
+// ❌ WRONG: Bare read-only entity without CqrsOutput wrapper
+public interface GetProductUseCase extends Query<GetProductInput, readonlyProduct> { }  // Compilation error!
 
 // ❌ WRONG: Extending Command (queries should extend Query)
 public interface GetProductUseCase extends Command<...> { }
@@ -275,13 +279,13 @@ public class GetProductService implements GetProductUseCase {
 
 ```java
 // ✅ CORRECT: Use query() method for Projection
-List<ProductReadOnly> products = projection.query(input);
+List<readonlyProduct> products = projection.query(input);
 
 // For simple single-item lookup (custom method)
-ProductReadOnly product = projection.findById(productId);
+readonlyProduct product = projection.findById(productId);
 
 // ❌ WRONG: Using execute() on Projection
-List<ProductReadOnly> products = projection.execute(input);  // WRONG method name!
+List<readonlyProduct> products = projection.execute(input);  // WRONG method name!
 ```
 
 **Rationale:** `query()` is the standard method defined by `Projection<I, O>` interface.
@@ -291,17 +295,17 @@ List<ProductReadOnly> products = projection.execute(input);  // WRONG method nam
 ```java
 // ✅ CORRECT: Read-only query
 @Override
-public ProductReadOnly execute(GetProductInput input) {
+public readonlyProduct execute(GetProductInput input) {
     return projection.findById(input.productId);  // Read only
 }
 
 // ❌ WRONG: Modifying state in query
 @Override
-public ProductReadOnly execute(GetProductInput input) {
+public readonlyProduct execute(GetProductInput input) {
     Product product = repository.findById(...).orElseThrow();
     product.incrementViewCount();  // FORBIDDEN! State modification
     repository.save(product);      // FORBIDDEN! Writing in query
-    return ProductReadOnly.from(product);
+    return new readonlyProduct(product);
 }
 ```
 
@@ -310,23 +314,23 @@ public ProductReadOnly execute(GetProductInput input) {
 ### Rule 5: Return Read-only Entity (wrapped in CqrsOutput), NOT Mutable Domain Entity
 
 ```java
-// ✅ CORRECT: DTO wrapped in CqrsOutput Output class (default query pattern)
+// ✅ CORRECT: Read-only entity wrapped in CqrsOutput Output class
 public interface GetProductUseCase extends Query<..., GetProductUseCase.GetProductOutput> {
     class GetProductOutput extends CqrsOutput<GetProductOutput> {
-        private ProductReadOnly product;  // DTO inside CqrsOutput wrapper
+        private readonlyProduct product;  // read-only entity inside CqrsOutput wrapper
     }
 }
 
 // ✅ CORRECT: Read-only entity wrapped in CqrsOutput when spec declares readOnlyEntities
 public interface GetProductUseCase extends Query<..., GetProductUseCase.GetProductOutput> {
     class GetProductOutput extends CqrsOutput<GetProductOutput> {
-        private ProductReadOnly product;  // Read-only entity view, not mutable Product
+        private readonlyProduct product;  // Read-only entity view, not mutable Product
     }
 }
 
-// ✅ CORRECT: Projection returns bare DTO (Projection is not constrained by CqrsOutput)
-public interface ProductProjection extends Projection<..., ProductReadOnly> {
-    ProductReadOnly findById(String productId);
+// ✅ CORRECT: Projection returns read-only entity (Projection is not constrained by CqrsOutput)
+public interface ProductProjection extends Projection<..., readonlyProduct> {
+    readonlyProduct findById(String productId);
 }
 
 // ❌ WRONG: Returning mutable domain entity
@@ -334,11 +338,11 @@ public interface GetProductUseCase extends Query<..., Product> {  // Mutable ent
 }
 
 // ❌ WRONG: Bare DTO as Query output (violates CqrsOutput constraint)
-public interface GetProductUseCase extends Query<..., ProductReadOnly> {  // Compilation error!
+public interface GetProductUseCase extends Query<..., readonlyProduct> {  // Compilation error!
 }
 ```
 
-**Rationale:** Mutable domain entities must not leak outside the aggregate boundary. Query Output must extend `CqrsOutput<T>` (CRTP). DTO is the default read model; a spec-declared read-only entity is allowed when it blocks mutation, wraps nested entities, and uses immutable collections.
+**Rationale:** Mutable domain entities must not leak outside the aggregate boundary. Query Output must extend `CqrsOutput<T>` (CRTP). Read-only entity is the required usecase-layer read model when mutable aggregate/internal domain state must be protected. DTOs are not allowed in the usecase layer.
 
 ### Rule 6: No @Service or @Repository Annotations
 
@@ -352,7 +356,7 @@ Additionally for Query: JPA Projection interfaces must NOT use `@Repository` —
 // ✅ CORRECT: Projection interface in port/out/projection
 package tw.teddysoft.aiscrum.product.usecase.port.out.projection;
 
-public interface ProductsProjection extends Projection<ProductsProjection.Input, List<ProductReadOnly>> {
+public interface ProductsProjection extends Projection<ProductsProjection.Input, List<readonlyProduct>> {
 
     class Input implements ProjectionInput {
         public String userId;
@@ -379,7 +383,7 @@ package tw.teddysoft.aiscrum.product.adapter.out.database.springboot.projection;
 public interface JpaProductsProjection extends ProductsProjection, JpaRepository<ProductData, String> {
 
     @Override
-    default List<ProductReadOnly> query(Input input) {
+    default List<readonlyProduct> query(Input input) {
         Sort sort = Sort.by(
             input.sortOrder == SortOrder.ASC ? Sort.Direction.ASC : Sort.Direction.DESC,
             input.sortBy == SortBy.NAME ? "name" : "createdAt"
@@ -404,38 +408,26 @@ public interface JpaProductsProjection extends ProductsProjection, JpaRepository
 >
 > Command 的 blanket catch 規則見 `patterns/usecase/command.md` Rule 8.5 / Rule 9。
 
-### Rule 9: DTO as Record
+### Rule 9: No DTO in UseCase Layer
+
+UseCase layer query outputs must not introduce DTOs.
 
 ```java
-// ✅ CORRECT: DTO as immutable record
-package tw.teddysoft.aiscrum.product.usecase.port;
-
-public record ProductReadOnly(
-    String productId,
-    String name,
-    String description,
-    boolean isDeleted
-) {
-    // Factory method for mapping
-    public static ProductReadOnly from(ProductData data) {
-        return new ProductReadOnly(
-            data.getId(),
-            data.getName(),
-            data.getDescription(),
-            data.isDeleted()
-        );
-    }
+// ✅ CORRECT: Output wraps read-only entity
+class GetProductOutput extends CqrsOutput<GetProductOutput> {
+    private readonlyProduct product;
+    public readonlyProduct getProduct() { return product; }
+    public GetProductOutput setProduct(readonlyProduct product) { this.product = product; return this; }
 }
 
-// ❌ WRONG: Mutable DTO class with setters
-public class ProductReadOnly {
-    private String productId;
-    public void setProductId(String id) { this.productId = id; }  // Avoid
-}
+// ❌ WRONG: DTO in usecase layer
+public record ProductDto(String productId, String name) {}
+
+// ❌ WRONG: mapper names DTO intent
+ProductDto toDto(ProductData data) { ... }
 ```
 
-**Rationale:** DTOs should be immutable for thread-safety and clarity.
-
+**Rationale:** The usecase layer exposes domain-safe read-only entities. DTOs belong only at adapter/API boundaries when controllers need request/response transport shapes.
 ### Rule 10: Package Locations
 
 > **Shared Rule** — See `references/rules/usecase-patterns.md` § Package Location Rules
@@ -463,11 +455,11 @@ public interface GetProductUseCase
 
     // Output wraps DTO inside CqrsOutput with CRTP self-reference
     class GetProductOutput extends CqrsOutput<GetProductOutput> {
-        private ProductReadOnly product;
+        private readonlyProduct product;
 
-        public ProductReadOnly getProductReadOnly() { return product; }
-        public GetProductOutput setProductReadOnly(ProductReadOnly dto) {
-            this.product = dto;
+        public readonlyProduct getProduct() { return product; }
+        public GetProductOutput setProduct(readonlyProduct product) {
+            this.product = product;
             return this;
         }
     }
@@ -478,13 +470,13 @@ class GetProductOutput extends CqrsOutput {  // Missing <GetProductOutput>!
     // Compilation warning + fluent methods return wrong type
 }
 
-// ❌ WRONG: Returning bare DTO when framework requires CqrsOutput subtype
-public interface GetProductUseCase extends Query<GetProductInput, ProductReadOnly> {
-    // Compilation error: ProductReadOnly doesn't extend CqrsOutput
+// ❌ WRONG: Returning bare read-only entity when framework requires CqrsOutput subtype
+public interface GetProductUseCase extends Query<GetProductInput, readonlyProduct> {
+    // Compilation error: readonlyProduct doesn't extend CqrsOutput
 }
 
 // ❌ WRONG: Using Optional as return type
-public interface GetProductUseCase extends Query<GetProductInput, Optional<ProductReadOnly>> {
+public interface GetProductUseCase extends Query<GetProductInput, Optional<readonlyProduct>> {
     // Compilation error: Optional doesn't extend CqrsOutput
 }
 ```
@@ -495,7 +487,7 @@ public interface GetProductUseCase extends Query<GetProductInput, Optional<Produ
 ```java
 // With CRTP: fluent methods return the concrete type
 GetProductOutput output = new GetProductOutput()
-    .setProductReadOnly(dto)        // returns GetProductOutput
+    .setProduct(product)        // returns GetProductOutput
     .setId(productId)          // returns GetProductOutput (from CqrsOutput<GetProductOutput>)
     .succeed();                // returns GetProductOutput
 
@@ -623,7 +615,7 @@ Before writing any file:
 |-------|--------------|
 | Extends Query | Interface extends `Query<Input, Output>` |
 | Uses Projection | Service injects Projection, not Repository |
-| CA-safe output model | Output is read-only entity only when CA-safe; otherwise DTO fallback, never mutable domain entity |
+| Read-only output model | Output uses read-only entity when mutable aggregate internals need protection; never DTO and never mutable domain entity |
 | No @Service | Service has no Spring annotations |
 | No @Repository | JPA Projection has no @Repository |
 
@@ -676,25 +668,33 @@ Extract from use-case.yaml:
 - `input`: Query parameters
 - `output`: Fields to return
 
-### Step 2: Generate DTO Record (only for CA fallback or DTO-spec queries)
+### Step 2: Generate Read-only Entity Proxy
+
+Generate this only after the Read-only Necessity Check says mutable aggregate/internal domain state must be protected.
 
 ```java
-package ${rootPackage}.${aggregateLowerCase}.usecase.port;
+package ${rootPackage}.${aggregateLowerCase}.entity;
 
-public record ${Name}ReadOnly(
-    String ${field1},
-    String ${field2}
-    // ... other fields from output spec
-) {
-    public static ${Name}ReadOnly from(${Name}Data data) {
-        return new ${Name}ReadOnly(
-            data.get${Field1}(),
-            data.get${Field2}()
-        );
+public interface ${Name} {
+    String get${Field1}();
+    String get${Field2}();
+}
+
+public final class Real${Name} implements ${Name} {
+    // Mutable domain implementation; command methods are not declared on ${Name}.
+}
+
+public final class readonly${Name} implements ${Name} {
+    private final ${Name} source;
+
+    public readonly${Name}(${Name} source) {
+        this.source = Objects.requireNonNull(source, "${Name} cannot be null");
     }
+
+    public String get${Field1}() { return source.get${Field1}(); }
+    public String get${Field2}() { return source.get${Field2}(); }
 }
 ```
-
 ### Step 3: Generate Projection Interface
 
 ```java
@@ -702,7 +702,7 @@ package ${rootPackage}.${aggregateLowerCase}.usecase.port.out.projection;
 
 import tw.teddysoft.ezddd.cqrs.usecase.query.Projection;
 import tw.teddysoft.ezddd.cqrs.usecase.query.ProjectionInput;
-import ${rootPackage}.${aggregateLowerCase}.usecase.port.${Name}ReadOnly;
+import ${rootPackage}.${aggregateLowerCase}.entity.readonly${Name};
 
 public interface ${Name}Projection extends Projection<${Name}Projection.${Name}Input, ${ReturnType}> {
 
@@ -712,7 +712,7 @@ public interface ${Name}Projection extends Projection<${Name}Projection.${Name}I
     }
 
     // For single-item queries, add convenience method
-    ${Name}ReadOnly findById(String id);
+    readonly${Name} findById(String id);
 }
 ```
 
@@ -722,7 +722,7 @@ public interface ${Name}Projection extends Projection<${Name}Projection.${Name}I
 package ${rootPackage}.${aggregateLowerCase}.adapter.out.database.springboot.projection;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import ${rootPackage}.${aggregateLowerCase}.usecase.port.${Name}ReadOnly;
+import ${rootPackage}.${aggregateLowerCase}.entity.readonly${Name};
 import ${rootPackage}.${aggregateLowerCase}.usecase.port.${Name}Mapper;
 import ${rootPackage}.${aggregateLowerCase}.usecase.port.out.${Name}Data;
 import ${rootPackage}.${aggregateLowerCase}.usecase.port.out.projection.${Name}Projection;
@@ -738,9 +738,9 @@ public interface Jpa${Name}Projection extends ${Name}Projection, JpaRepository<$
 
     // For single-item queries
     @Override
-    default ${Name}ReadOnly findById(String id) {
+    default readonly${Name} findById(String id) {
         return findById(id)
-            .map(${Name}ReadOnly::from)
+            .map(readonly${Name}::new)
             .orElse(null);
     }
 
@@ -756,7 +756,7 @@ package ${rootPackage}.${aggregateLowerCase}.usecase.port.in;
 
 import tw.teddysoft.ezddd.cqrs.usecase.query.Query;
 import tw.teddysoft.ezddd.usecase.port.in.interactor.Input;
-import ${rootPackage}.${aggregateLowerCase}.usecase.port.${Name}ReadOnly;
+import ${rootPackage}.${aggregateLowerCase}.entity.readonly${Name};
 
 public interface ${UseCase}UseCase extends Query<${UseCase}UseCase.${UseCase}Input, ${UseCase}UseCase.${UseCase}Output> {
 
@@ -769,11 +769,11 @@ public interface ${UseCase}UseCase extends Query<${UseCase}UseCase.${UseCase}Inp
     }
 
     class ${UseCase}Output extends CqrsOutput<${UseCase}Output> {
-        private ${Name}ReadOnly ${nameCamelCase};  // or List<${Name}ReadOnly> for list queries
+        private readonly${Name} ${nameCamelCase};  // or List<readonly${Name}> for list queries
 
-        public ${Name}ReadOnly get${Name}ReadOnly() { return ${nameCamelCase}; }
-        public ${UseCase}Output set${Name}ReadOnly(${Name}ReadOnly dto) {
-            this.${nameCamelCase} = dto;
+        public readonly${Name} get${Name}() { return ${nameCamelCase}; }
+        public ${UseCase}Output set${Name}(readonly${Name} ${nameCamelCase}) {
+            this.${nameCamelCase} = ${nameCamelCase};
             return this;
         }
     }
@@ -787,7 +787,7 @@ package ${rootPackage}.${aggregateLowerCase}.usecase.service;
 
 import ${rootPackage}.${aggregateLowerCase}.usecase.port.in.${UseCase}UseCase;
 import ${rootPackage}.${aggregateLowerCase}.usecase.port.out.projection.${Name}Projection;
-import ${rootPackage}.${aggregateLowerCase}.usecase.port.${Name}ReadOnly;
+import ${rootPackage}.${aggregateLowerCase}.entity.readonly${Name};
 
 import static tw.teddysoft.ucontract.Contract.*;
 
@@ -810,9 +810,9 @@ public class ${UseCase}Service implements ${UseCase}UseCase {
         var projectionInput = new ${Name}Projection.${Name}Input();
         projectionInput.${inputField1} = input.${inputField1};
 
-        ${Name}ReadOnly dto = projection.query(projectionInput);
+        readonly${Name} ${nameCamelCase} = projection.query(projectionInput);
         return new ${UseCase}Output()
-                .set${Name}ReadOnly(dto)
+                .set${Name}(${nameCamelCase})
                 .setId(input.${inputField1})
                 .succeed();
     }
@@ -829,26 +829,42 @@ Add `@Bean` method for the query use case to `{Aggregate}UseCaseConfig.java`.
 
 ## EXAMPLE OUTPUT
 
-For IDF specification requesting product list by user:
+For IDF specification requesting product list by user where Product exposes mutable aggregate/internal state:
 
-**ProductReadOnly.java:**
+**Product.java:**
 ```java
-package tw.teddysoft.aiscrum.product.usecase.port;
+package tw.teddysoft.aiscrum.product.entity;
 
-public record ProductReadOnly(
-    String productId,
-    String name,
-    String description,
-    boolean isDeleted
-) {
-    public static ProductReadOnly from(ProductData data) {
-        return new ProductReadOnly(
-            data.getId(),
-            data.getName(),
-            data.getDescription(),
-            data.isDeleted()
-        );
+public interface Product {
+    ProductId getProductId();
+    String getName();
+    boolean isDeleted();
+}
+```
+
+**RealProduct.java:**
+```java
+package tw.teddysoft.aiscrum.product.entity;
+
+public final class RealProduct extends EsAggregateRoot<ProductId, ProductEvents> implements Product {
+    // Mutable aggregate implementation. Command methods are not declared on Product.
+}
+```
+
+**readonlyProduct.java:**
+```java
+package tw.teddysoft.aiscrum.product.entity;
+
+public final class readonlyProduct implements Product {
+    private final Product source;
+
+    public readonlyProduct(Product source) {
+        this.source = Objects.requireNonNull(source, "Product cannot be null");
     }
+
+    public ProductId getProductId() { return source.getProductId(); }
+    public String getName() { return source.getName(); }
+    public boolean isDeleted() { return source.isDeleted(); }
 }
 ```
 
@@ -858,11 +874,10 @@ package tw.teddysoft.aiscrum.product.usecase.port.out.projection;
 
 import tw.teddysoft.ezddd.cqrs.usecase.query.Projection;
 import tw.teddysoft.ezddd.cqrs.usecase.query.ProjectionInput;
-import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnly;
+import tw.teddysoft.aiscrum.product.entity.readonlyProduct;
 import java.util.List;
 
-public interface ProductsProjection extends Projection<ProductsProjection.ProductsInput, List<ProductReadOnly>> {
-
+public interface ProductsProjection extends Projection<ProductsProjection.ProductsInput, List<readonlyProduct>> {
     class ProductsInput implements ProjectionInput {
         public String userId;
         public SortBy sortBy = SortBy.NAME;
@@ -881,30 +896,22 @@ package tw.teddysoft.aiscrum.product.usecase.port.in;
 import tw.teddysoft.ezddd.cqrs.usecase.CqrsOutput;
 import tw.teddysoft.ezddd.cqrs.usecase.query.Query;
 import tw.teddysoft.ezddd.usecase.port.in.interactor.Input;
-import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnly;
+import tw.teddysoft.aiscrum.product.entity.readonlyProduct;
 import java.util.List;
 
 public interface GetProductsUseCase extends Query<GetProductsUseCase.GetProductsInput, GetProductsUseCase.GetProductsOutput> {
-
     class GetProductsInput implements Input {
         public String userId;
         public String sortBy;
         public String sortOrder;
-
-        public static GetProductsInput create() {
-            return new GetProductsInput();
-        }
+        public static GetProductsInput create() { return new GetProductsInput(); }
     }
 
     class GetProductsOutput extends CqrsOutput<GetProductsOutput> {
-        public List<ProductReadOnly> products;
-
-        public static GetProductsOutput create() {
-            return new GetProductsOutput();
-        }
-
-        public GetProductsOutput setProducts(List<ProductReadOnly> products) {
-            this.products = products;
+        private List<readonlyProduct> products = List.of();
+        public List<readonlyProduct> getProducts() { return products; }
+        public GetProductsOutput setProducts(List<readonlyProduct> products) {
+            this.products = List.copyOf(products);
             return this;
         }
     }
@@ -915,48 +922,36 @@ public interface GetProductsUseCase extends Query<GetProductsUseCase.GetProducts
 ```java
 package tw.teddysoft.aiscrum.product.usecase.service;
 
-import tw.teddysoft.aiscrum.product.usecase.port.ProductReadOnly;
+import tw.teddysoft.aiscrum.product.entity.readonlyProduct;
 import tw.teddysoft.aiscrum.product.usecase.port.in.GetProductsUseCase;
 import tw.teddysoft.aiscrum.product.usecase.port.out.projection.ProductsProjection;
 import tw.teddysoft.ezddd.usecase.port.in.interactor.ExitCode;
-
 import java.util.List;
+import java.util.Objects;
 
 import static tw.teddysoft.ucontract.Contract.*;
 
 public class GetProductsService implements GetProductsUseCase {
-
     private final ProductsProjection projection;
 
     public GetProductsService(ProductsProjection projection) {
-        Objects.requireNonNull(projection);
-        this.projection = projection;
+        this.projection = Objects.requireNonNull(projection);
     }
 
     @Override
     public GetProductsOutput execute(GetProductsInput input) {
         requireNotNull("Input", input);
-
         var projectionInput = new ProductsProjection.ProductsInput();
         projectionInput.userId = input.userId;
-        if (input.sortBy != null) {
-            projectionInput.sortBy = ProductsProjection.SortBy.valueOf(input.sortBy);
-        }
-        if (input.sortOrder != null) {
-            projectionInput.sortOrder = ProductsProjection.SortOrder.valueOf(input.sortOrder);
-        }
-
-        List<ProductReadOnly> products = projection.query(projectionInput);
-
-        return GetProductsOutput.create()
-            .setProducts(products)
-            .setExitCode(ExitCode.SUCCESS);
+        List<readonlyProduct> products = projection.query(projectionInput);
+        return new GetProductsOutput()
+                .setProducts(products)
+                .setExitCode(ExitCode.SUCCESS);
     }
 }
 ```
 
 ---
-
 ## INTEGRATION WITH ORCHESTRATOR
 
 When called by `code executor`:
@@ -966,7 +961,7 @@ code executor
     ↓
     Step 4.2 (IDF): Invoke query-skill
     ├─ Input: ${problemFramePath}/display/
-    ├─ Output: UseCase, Service, Projection, JpaProjection, DTO
+    ├─ Output: UseCase, Service, Projection, JpaProjection, read-only entity
     └─ Next: Step 4.3 (usecase-test-skill)
 ```
 

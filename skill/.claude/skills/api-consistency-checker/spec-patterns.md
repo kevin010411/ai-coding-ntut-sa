@@ -172,10 +172,10 @@ response:
   success:
     status: 200
     body:
-      type: List<ProductReadOnly>
+      type: List<readonlyProduct>
 ```
 - **Success status**: `200`
-- **Response body type**: `List<ProductReadOnly>`
+- **Response body type**: `List<readonlyProduct>`
 
 ## HTTP Method Mapping by Frame Type
 

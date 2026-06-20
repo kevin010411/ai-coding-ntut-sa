@@ -54,7 +54,7 @@ COMMAND has two sub-types based on the `method` field:
 |-----------|----------------|
 | COMMAND (Constructor) | `useCase`, `input`, `aggregate`, `domainEvent`, `aggregates`, `domainEvents` |
 | COMMAND (Method-call) | `useCase`, `input`, `aggregate`, `domainEvent`, `domainEvents` |
-| QUERY | `query`, `input`, `output`, `dependencies`, and either `projections`/`dataTransferObjects` for DTO queries or `readOnlyEntities` for read-only entity queries |
+| QUERY | `query`, `input`, `output`, `dependencies`, and `readOnlyEntities` only when the Read-only Necessity Check requires them |
 | REACTOR | `reactor`, `events`, `dependencies` |
 
 > **Note on `domainEvent` field format**: Accepts both string (`"SprintEvents.X"`)
@@ -279,21 +279,20 @@ mvn test -Dtest={UseCase}ControllerIntegrationTest -q
 
 ### ═══ QUERY UseCase Path ═══
 
-#### Step 4.0 — Decide Read-only vs DTO Outport (⛔ BLOCKING)
+#### Step 4.0 — Decide Whether Read-only Is Needed (⛔ BLOCKING)
 
-Before generating read-only entities, perform a Clean Architecture boundary check:
+Before deciding which domain models become read-only, first decide whether read-only is needed at all:
 
-1. Identify every query outport return type from `spec.dependencies[]`, `spec.projections[]`, and `spec.readOnlyEntities[]`.
-2. Verify the outport contract does not depend on adapter/infrastructure types, JPA persistent objects, Spring Data projections, or mutable domain entities.
-3. Verify the proposed `*ReadOnly` implementation does not force the domain model to import or depend on usecase, adapter, DTO, projection, or persistence packages.
-4. If any check fails, switch that outport to DTO/read-model fallback in `usecase.port` and generate mapper logic at the adapter/application boundary.
-5. Continue with read-only entity generation only for outputs that pass the CA boundary check.
+1. Inspect the query output graph from `spec.output`, `spec.dependencies[]`, `spec.projections[]`, and `spec.readOnlyEntities[]`.
+2. If the output exposes only primitives, strings, enums, IDs, immutable value objects, timestamps, or immutable collections of those safe values, do not generate extra read-only wrappers.
+3. If the output exposes a mutable aggregate root, child entity, nested mutable entity, or collection/map of mutable entities, generate read-only wrappers for those objects.
+4. Use proxy/composition naming: original name = interface, `Real*` = mutable implementation, `readonly*` = read-only proxy.
+5. Never switch to DTO/read-model fallback in the usecase layer.
 
 **CRITICAL checks**:
-- Read-only MUST NOT override Clean Architecture dependency direction.
-- DTO fallback is REQUIRED when read-only would violate outport boundaries.
+- UseCase layer MUST NOT contain DTO records, DTO projections, DTO fallback types, or `toDto(...)` mappers.
+- Read-only exists to protect aggregate internals; do not create unnecessary wrappers for safe immutable values.
 - Mutable aggregate/entity leakage remains forbidden in all cases.
-
 #### Step 4.1 — Generate Read-only Entities
 
 ```
@@ -301,7 +300,7 @@ LOAD_PATTERNS:
   - references/patterns/usecase/query.md
 ```
 
-**SOURCE**: `spec.readOnlyEntities[]` that passed Step 4.0
+**SOURCE**: `spec.readOnlyEntities[]` required by Step 4.0
 
 **Generate**:
 1. Read-only entity classes/views
@@ -310,7 +309,7 @@ LOAD_PATTERNS:
 4. Mutation-blocking methods for any state-changing operations
 
 **CRITICAL checks**:
-- Query output MUST NOT use DTO records, DTO projections, or `toDto(...)` mappers unless Step 4.0 selected DTO fallback for CA-safe outports
+- Query output MUST NOT use DTO records, DTO projections, DTO fallback types, or `toDto(...)` mappers
 - Query output MUST NOT expose mutable aggregate/entity references
 - Query UseCase does NOT blanket catch (no `UseCaseFailureException`)
 

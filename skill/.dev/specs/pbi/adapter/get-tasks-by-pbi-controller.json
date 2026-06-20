@@ -16,13 +16,13 @@
           },
           "output": {
             "type": "list",
-            "entity": "TaskReadOnly",
+            "entity": "readonlyTask",
             "itemType": "readOnlyEntity"
           }
         },
         "responses": {
           "200": {
-            "body": "List<TaskReadOnly>"
+            "body": "List<readonlyTask>"
           },
           "400": {
             "body": "ApiError"
@@ -84,8 +84,8 @@
       "when": "GET /v1/api/pbis/{pbiId}/tasks",
       "then": [
         "Returns HTTP 200",
-        "Response body contains List<TaskReadOnly>",
-        "Each TaskReadOnly contains all required fields (id, pbiId, name, state, etc.)",
+        "Response body contains List<readonlyTask>",
+        "Each readonlyTask contains all required fields (id, pbiId, name, state, etc.)",
         "Content-Type is application/json"
       ]
     },
@@ -155,7 +155,7 @@
           "validation": "@NotBlank"
         }
       ],
-      "returnType": "ResponseEntity<List<TaskReadOnly>>"
+      "returnType": "ResponseEntity<List<readonlyTask>>"
     }
   },
   "notes": [

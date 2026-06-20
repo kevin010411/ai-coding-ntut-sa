@@ -1,26 +1,35 @@
 package tw.teddysoft.aiscrum.product.usecase;
 
-import tw.teddysoft.aiscrum.product.usecase.port.ProductDtoProjection;
-import tw.teddysoft.aiscrum.product.usecase.port.ProductDtoProjectionInput;
+import tw.teddysoft.aiscrum.product.entity.ProductId;
+import tw.teddysoft.aiscrum.product.entity.readonlyProduct;
+import tw.teddysoft.aiscrum.product.usecase.port.ProductRepository;
+import tw.teddysoft.ezddd.usecase.port.in.interactor.ExitCode;
 
-import java.util.NoSuchElementException;
 import java.util.Objects;
+
+import static tw.teddysoft.ucontract.Contract.requireNotNull;
 
 public class GetProductService implements GetProductUseCase {
 
-    private final ProductDtoProjection productDtoProjection;
+    private final ProductRepository productRepository;
 
-    public GetProductService(ProductDtoProjection productDtoProjection) {
-        this.productDtoProjection = Objects.requireNonNull(productDtoProjection);
+    public GetProductService(ProductRepository productRepository) {
+        this.productRepository = Objects.requireNonNull(productRepository);
     }
 
     @Override
     public GetProductOutput execute(GetProductInput input) {
-        return productDtoProjection.query(new ProductDtoProjectionInput(input.productId))
+        requireNotNull("Input", input);
+        requireNotNull("Product id", input.productId);
+
+        return productRepository.findById(ProductId.valueOf(input.productId))
                 .map(product -> new GetProductOutput()
-                        .setProduct(product)
+                        .setReadonlyProduct(readonlyProduct.from(product))
                         .setId(input.productId)
-                        .succeed())
-                .orElseThrow(() -> new NoSuchElementException("Product not found: " + input.productId));
+                        .setExitCode(ExitCode.SUCCESS))
+                .orElseGet(() -> new GetProductOutput()
+                        .setId(input.productId)
+                        .setMessage("Get product failed: product not found, product id = " + input.productId)
+                        .setExitCode(ExitCode.FAILURE));
     }
 }
